@@ -106,17 +106,24 @@ writes that out.
 
 ### Validation
 
-- `version` is `1`.
+- Unknown keys are errors at every level (`arrangements` included, until
+  arrangements exist), so a typo is reported rather than ignored.
+- `version` is `1`; a missing `version` reads as `1`.
 - Settings: values within the ranges and enumerations above; `leader` is a
   single key token with at least one modifier.
-- Regions: each margin and each gap is a number in `0…0.5`; per axis the two
-  margins sum to less than `1`.
+- Regions: names match `[a-z0-9][a-z0-9-]*`; each margin and each gap is a
+  number in `0…0.5`; per axis the two margins sum to less than `1`; a gap
+  object with only `x` or `y` takes `0` for the other.
 - Placements: `rect` is `[x, y, w, h]` (or `{x, y, w, h}`) with `x, y ≥ 0`,
   `w, h > 0`, `x + w ≤ 1`, `y + h ≤ 1` (to within `1e-9`); `region`, when
   given, names a defined region. Names match `[a-z0-9][a-z0-9-]*` and may not
   be a built-in action.
-- Bindings: each key parses as a chord; each value names a placement or a
-  built-in action. Built-in actions: `screen-east`, `screen-west`.
+- Bindings: each key parses as a chord (modifiers before the key, tokens
+  separated by single spaces); each value names a placement or a built-in
+  action. Built-in actions: `screen-east`, `screen-west`. Two spellings of
+  the same canonical chord (`ctrl+h` and `control+h`) are an error.
+- YAML plain scalars `off`, `on`, `yes`, `no` are read as strings, never
+  booleans, so `cheat_sheet: off` means the enumeration value.
 - A chord that is also the prefix of a longer chord is a **warning**, not an
   error: it is valid, and it waits. One warning per (prefix, longer chord)
   pair, worded exactly `"<prefix>" is the start of "<longer>", so it waits
@@ -214,9 +221,21 @@ Reply (one line of JSON, then `\n`):
 {"ok":false,"error":"Accessibility permission is not granted","code":"not_permitted"}
 ```
 
-Error codes: `bad_request`, `not_permitted` (no Accessibility grant),
-`not_found`, `ambiguous`, `unavailable` (no config loaded yet), `internal`.
-An `ambiguous` reply carries `"candidates": [window, …]`.
+Error codes: `bad_request` (including an unknown placement or region name),
+`not_permitted` (no Accessibility grant), `not_found`, `ambiguous`,
+`unavailable` (no config loaded yet), `internal`. An `ambiguous` reply
+carries `"candidates": [window, …]`. The CLI adds `not_running` to its own
+`--json` error output when there is no connection or no reply; the app never
+sends it.
+
+Reply details the app settles:
+- A bound `chord` that cannot run (no focused window) is an error reply, not
+  `"ran": false`; `"ran": false` means the chord is unbound
+- A failed `config.reload` is `"ok": true` with `"loaded": false` and the
+  error: the request worked, the config did not
+- `"main"` in settings means the screen with the menu bar
+- Geometry rounds each **edge** to a whole point (not origin and size), so
+  neighbouring windows share an edge: 477.5 / 472.5 becomes x 478, w 472
 
 The CLI waits 5 s for a reply. No connection, or no reply, means the app is
 not running.
