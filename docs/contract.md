@@ -254,16 +254,18 @@ and the Dock):
 
 1. **Area** `A` = `V` shrunk by the region's margins, each a fraction of
    `V`'s width (left, right) or height (top, bottom).
-2. **Slot** = `A.x + rect.x·A.w`, `A.y + rect.y·A.h`, `rect.w·A.w`,
-   `rect.h·A.h`.
-3. **Gap:** each slot edge strictly inside the area (`rect.x > 0` for the
-   left edge, `rect.x + rect.w < 1` for the right, likewise vertically) moves
-   inward by half the region's gap, as a fraction of `V`'s width or height.
-   Edges on the area boundary do not move.
-4. Round to whole points.
+2. **Slot:** each axis is laid out as a grid whose cells are separated by the
+   region's gap, `gx` = gap x · `V.w` and `gy` = gap y · `V.h` points:
+   `x = A.x + rect.x·(A.w + gx)`, `w = rect.w·(A.w + gx) − gx`, and likewise
+   `y` and `h` with `A.h` and `gy`. Edges on the area boundary stay on it,
+   neighbouring slots are exactly one gap apart, and equal fractions give
+   equal slots however many share the axis.
+3. Round to whole points.
 
-Check: `V.w = 1000`, region `{"margins": {"right": 0.05}, "gap": 0.005}`,
-rect `[0.5, 0, 0.5, 1]` → `x = 477.5`, `w = 472.5` before rounding.
+Checks: `V.w = 1000`, region `{"margins": {"right": 0.05}, "gap": 0.005}`,
+rect `[0.5, 0, 0.5, 1]` → `x = 477.5`, `w = 472.5` before rounding. And
+`V.h = 1000`, gap y `0.025`, rects `[·, k/3, ·, 1/3]` for k = 0, 1, 2 → each
+`h = 316.67`, `y = 0, 341.67, 683.33`: three equal slots, two 25-point gaps.
 
 `screen-east` / `screen-west` move the window to the nearest display whose
 frame lies wholly to the east (west), keeping its position and size as

@@ -208,8 +208,18 @@ check("full height edges do not move", near(leftSlot.y, 0) && near(rightSlot.h, 
 
 let stack = Region(margins: Margins(top: 0, right: 0.05, bottom: 0, left: 0), gap: Gap(x: 0.005, y: 0.025))
 let squareV = Rect(x: 0, y: 0, w: 1000, h: 1000)
-let third = Geometry.slot(Rect(x: 0.5, y: 0, w: 0.5, h: 0.25), visible: squareV, region: stack)
-check("a vertical gap applies only to the inner edge", near(third.y, 0) && near(third.maxY, 237.5))
+let quarter = Geometry.slot(Rect(x: 0.5, y: 0, w: 0.5, h: 0.25), visible: squareV, region: stack)
+check("a quarter of four keeps its outer edge and is a quarter of the space between gaps",
+      near(quarter.y, 0) && near(quarter.h, 231.25))
+let thirds = (0..<3).map { index in
+    Geometry.slot(Rect(x: 0.5, y: Double(index) / 3, w: 0.5, h: 1.0 / 3), visible: squareV, region: stack)
+}
+check("contract check: three thirds are equal", thirds.allSatisfy { near($0.h, (1000.0 - 2 * 25) / 3) })
+check("contract check: the gaps between thirds are equal",
+      near(thirds[1].y - thirds[0].maxY, 25) && near(thirds[2].y - thirds[1].maxY, 25))
+check("the outer thirds stay on the area boundary", near(thirds[0].y, 0) && near(thirds[2].maxY, 1000))
+check("a whole-area rect fills the area whatever the gap",
+      Geometry.slot(Rect(x: 0, y: 0, w: 1, h: 1), visible: squareV, region: stack) == Rect(x: 0, y: 0, w: 950, h: 1000))
 let margined = Geometry.area(
     visible: Rect(x: 100, y: 50, w: 1000, h: 500),
     region: Region(margins: Margins(top: 0.1, right: 0.05, bottom: 0.2, left: 0.1), gap: .zero)

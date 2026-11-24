@@ -65,20 +65,17 @@ enum Geometry {
         )
     }
 
-    /// The contract's steps 1–3, before rounding.
+    /// The contract's steps 1–2, before rounding.
     static func slot(_ rect: Rect, visible v: Rect, region: Region) -> Rect {
         let a = area(visible: v, region: region)
-        var left = a.x + rect.x * a.w
-        var top = a.y + rect.y * a.h
-        var right = left + rect.w * a.w
-        var bottom = top + rect.h * a.h
-        let halfX = region.gap.x * v.w / 2
-        let halfY = region.gap.y * v.h / 2
-        if rect.x > tolerance { left += halfX }
-        if rect.x + rect.w < 1 - tolerance { right -= halfX }
-        if rect.y > tolerance { top += halfY }
-        if rect.y + rect.h < 1 - tolerance { bottom -= halfY }
-        return Rect(x: left, y: top, w: right - left, h: bottom - top)
+        let gx = region.gap.x * v.w
+        let gy = region.gap.y * v.h
+        return Rect(
+            x: a.x + rect.x * (a.w + gx),
+            y: a.y + rect.y * (a.h + gy),
+            w: rect.w * (a.w + gx) - gx,
+            h: rect.h * (a.h + gy) - gy
+        )
     }
 
     static func frame(_ rect: Rect, visible: Rect, region: Region) -> Rect {
