@@ -1,5 +1,6 @@
 require "spec"
 require "file_utils"
+require "digest/sha256"
 
 # Reach the library without running the program. Integration examples run
 # the built binary instead: exit codes and streams are only observable from

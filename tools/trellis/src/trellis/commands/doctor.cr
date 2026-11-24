@@ -1,5 +1,3 @@
-require "digest/sha256"
-
 module Trellis
   module Commands
     # Independent checks, all reported rather than stopping at the first.
@@ -164,7 +162,7 @@ module Trellis
       private def installed_cli_check(checks : Array(Check), manifest : JSON::Any) : Hash(String, String | Bool | Nil)
         binary = Paths.binary
         expected = manifest["trellis_sha256"]?.try(&.as_s?)
-        sha256 = File.file?(binary) ? Digest::SHA256.new.file(binary.to_s).hexfinal : nil
+        sha256 = File.file?(binary) ? sha256_of(binary) : nil
         if sha256.nil?
           checks << Check.new(Level::Fail, "installed cli", "#{binary} is missing; `trellis update` installs it")
         elsif expected.nil?
@@ -203,6 +201,15 @@ module Trellis
       rescue error : File::Error
         checks << Check.new(Level::Warn, "registration", "could not ask Launch Services: #{error.message}")
         nil
+      end
+
+      # Not Digest::SHA256: it links Homebrew's OpenSSL, which bin/package
+      # refuses to ship.
+      private def sha256_of(path : Path) : String?
+        output = IO::Memory.new
+        status = Process.run("/usr/bin/shasum", ["-a", "256", path.to_s],
+          output: output, error: Process::Redirect::Close)
+        status.success? ? output.to_s.split.first? : nil
       end
 
       private def plist_value(app : Path, key : String) : String?
