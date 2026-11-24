@@ -263,8 +263,7 @@ and the Dock):
 4. Round to whole points.
 
 Check: `V.w = 1000`, region `{"margins": {"right": 0.05}, "gap": 0.005}`,
-rect `[0.5, 0, 0.5, 1]` → `x = 477.5`, `w = 472.5` before rounding — the
-Hammerspoon `right` layout.
+rect `[0.5, 0, 0.5, 1]` → `x = 477.5`, `w = 472.5` before rounding.
 
 `screen-east` / `screen-west` move the window to the nearest display whose
 frame lies wholly to the east (west), keeping its position and size as
