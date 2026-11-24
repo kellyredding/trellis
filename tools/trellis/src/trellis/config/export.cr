@@ -53,10 +53,6 @@ module Trellis
               json.field "linger_ms", settings.label_linger_ms
             end
           end
-          json.field "cheat_sheet", settings.cheat_sheet
-          json.field("dropdown") do
-            json.object { json.field "screens", settings.dropdown_screens }
-          end
         end
       end
 

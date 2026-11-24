@@ -81,6 +81,11 @@ enum SettingsMetrics {
     static let tileWidth: CGFloat = 124
     static let tileSpacing: CGFloat = 8
     static let tilesPerRow = 5
+    /// Fixed heights, so the Bindings tab's height is computed, not measured.
+    static let bindingsGrid = BindingsGrid(
+        tilesPerRow: tilesPerRow, tileHeight: 80, tileSpacing: Double(tileSpacing),
+        headerHeight: 16, headerSpacing: 6, sectionSpacing: 12
+    )
     /// Every tab shares the Bindings tab's width: a row of tiles, the card's
     /// and window's padding, and room for a legacy scroller.
     static let windowWidth: CGFloat =

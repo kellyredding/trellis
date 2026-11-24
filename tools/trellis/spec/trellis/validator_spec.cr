@@ -62,10 +62,11 @@ describe Trellis::Config::Validator do
     it "checks each enumeration" do
       SpecHelper.errors(%({"settings": {"label": {"screens": "some"}}})).first.should contain("all, main, target")
       SpecHelper.errors(%({"settings": {"label": {"corner": "middle"}}})).first.should contain("bottom-right")
-      SpecHelper.errors(%({"settings": {"cheat_sheet": "on"}})).first.should contain("off, label, dropdown")
-      SpecHelper.errors(%({"settings": {"cheat_sheet": false}})).first.should contain("off, label, dropdown")
-      SpecHelper.errors(%({"settings": {"dropdown": {"screens": "target"}}})).first.should contain("off, all, main")
-      SpecHelper.errors(%({"settings": {"cheat_sheet": "off", "dropdown": {"screens": "off"}}})).should be_empty
+    end
+
+    it "has no cheat sheet or dropdown settings" do
+      SpecHelper.errors(%({"settings": {"cheat_sheet": "off"}})).should eq([%(settings: unknown key "cheat_sheet")])
+      SpecHelper.errors(%({"settings": {"dropdown": {"screens": "off"}}})).should eq([%(settings: unknown key "dropdown")])
     end
 
     it "needs a leader that is one key token with a modifier" do
@@ -265,8 +266,8 @@ describe Trellis::Config::Validator do
     end
   end
 
-  describe "prefix warnings" do
-    it "warns once per waiting chord, worded exactly, listing the chords it starts in order" do
+  describe "prefix chords" do
+    it "flags each chord that starts a longer one, without a warning" do
       result = SpecHelper.validate(acting(<<-JSON))
           "bindings": {
             "l l": "screen-east",
@@ -278,17 +279,13 @@ describe Trellis::Config::Validator do
           }
         JSON
       result.errors.should be_empty
-      result.warnings.should eq([
-        "a waits: it starts a b, a b c",
-        "a b waits: it starts a b c",
-        "l waits: it starts l l, l l x",
-        "l l waits: it starts l l x",
-      ])
+      result.warnings.should be_empty
       result.model!.bindings.select(&.prefix).map(&.keys).should eq(["a", "a b", "l", "l l"])
     end
 
     it "does not count a chord whose first token merely shares a key" do
-      SpecHelper.validate(acting(%("bindings": {"l": "screen-east", "ctrl+l x": "screen-west"}))).warnings.should be_empty
+      SpecHelper.validate(acting(%("bindings": {"l": "screen-east", "ctrl+l x": "screen-west"}))).model!
+        .bindings.select(&.prefix).should be_empty
     end
   end
 

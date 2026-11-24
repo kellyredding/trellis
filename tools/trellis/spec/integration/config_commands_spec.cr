@@ -102,28 +102,23 @@ describe "trellis config" do
     end
   end
 
-  it "validates and lists prefix warnings" do
+  it "does not warn about a chord that waits, in validate, doctor or the export" do
     SpecHelper.sandbox do |sandbox|
-      result = SpecHelper.run(sandbox, ["config", "validate"],
-        {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.json").to_s})
-      result.exit_code.should eq(0)
-      result.stdout.should contain("warning: l waits: it starts l l\n")
-    end
-  end
-
-  it "collapses the prefix warnings to one line per waiting chord in validate and doctor" do
-    SpecHelper.sandbox do |sandbox|
-      bindings = ["h", "h t", "h b", "h k", "h g", "h j", "h h"].map { |keys| %("#{keys}": "left-half") }
+      bindings = ["h", "h t", "h b"].map { |keys| %("#{keys}": "left-half") }
       sandbox.write_config(GUTTER_CONFIG.sub(%("h": "left-half"), bindings.join(",\n")))
 
       validate = SpecHelper.run(sandbox, ["config", "validate"])
       validate.exit_code.should eq(0)
-      validate.stdout.lines.count(&.starts_with?("warning: ")).should eq(1)
-      validate.stdout.should contain("warning: h waits: it starts h b, h g, h h, h j, h k, h t\n")
+      validate.stdout.should_not contain("warning")
 
       doctor = SpecHelper.run(sandbox, ["doctor"])
-      doctor.stdout.lines.count(&.matches?(/\Awarn\s+config\s/)).should eq(1)
-      doctor.stdout.should match(/warn\s+config\s+h waits: it starts h b, h g, h h, h j, h k, h t\n/)
+      doctor.stdout.should_not match(/^warn\s+config\s/m)
+
+      export = SpecHelper.run(sandbox, ["config", "export", "--json"]).json
+      export["warnings"].as_a.should be_empty
+      export["bindings"].as_a.find! { |binding| binding["keys"] == "h" }["prefix"].should eq(true)
+
+      SpecHelper.run(sandbox, ["bindings", "list"]).stdout.should match(/^  h +left-half +placement +waits$/m)
     end
   end
 
@@ -180,7 +175,7 @@ describe "config mutations" do
       export = SpecHelper.run(sandbox, ["config", "export", "--json"]).json
       export["source"].should eq("file")
       export["bindings"].as_a.size.should eq(16)
-      export["warnings"].as_a.map(&.as_s).should eq(["l waits: it starts l l"])
+      export["warnings"].as_a.should be_empty
     end
   end
 
@@ -334,8 +329,8 @@ describe "config mutations" do
         ["label.linger_ms", "3001"]  => "0 to 3000",
         ["label.corner", "middle"]   => "top-left, top-right",
         ["label.screens", "some"]    => "all, main, target",
-        ["cheat_sheet", "on"]        => "off, label, dropdown",
-        ["dropdown.screens", "Main"] => "off, all, main",
+        ["cheat_sheet", "off"]       => "unknown setting",
+        ["dropdown.screens", "main"] => "unknown setting",
         ["leader", "s"]              => "needs at least one modifier",
         ["leader", "ctrl+nope"]      => "is not a key name",
       }.each do |argv, message|

@@ -11,7 +11,7 @@ module Trellis
         Actions:
           path                     The configured path (and where its symlink resolves)
           show                     The config file's JSON (the built-in starter when no file exists)
-          validate                 Check it: errors exit 1; prefix chords are warnings
+          validate                 Check it: errors exit 1; an unused group is a warning
           export --json            The normalized config the app loads
           init [--starter] [--force]
                                    Write a config file: a minimal one, or the starter

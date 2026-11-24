@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The layout-mode label: `⌃S  l l` as keys are typed, a missed chord until
-/// the next key, and the cheat sheet when settings put it in the label.
+/// The layout-mode label: `⌃S  l l` as keys are typed, and a missed chord
+/// until the next key.
 struct LayoutLabelView: View {
     @ObservedObject var layoutMode: LayoutMode
     @ObservedObject var configStore: ConfigStore
@@ -9,46 +9,27 @@ struct LayoutLabelView: View {
     /// The chord and key text in the label and the chord confirmation.
     static let keysFont = Font.system(size: 20, weight: .medium, design: .monospaced)
 
-    private var showsCheatSheet: Bool { configStore.config?.settings.cheatSheet == .label }
-
     static func leader(_ config: TrellisConfig?) -> String {
         let text = config?.settings.leader ?? Settings.defaultLeader
         return KeyToken(text)?.display(uppercased: true) ?? text
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text(Self.leader(configStore.config))
-                if !layoutMode.typed.isEmpty {
-                    Text("  " + KeyToken.chordDisplay(layoutMode.typed))
-                }
-                if let missed = layoutMode.missed {
-                    Text("  " + KeyToken.chordDisplay(missed))
-                        .strikethrough()
-                        .foregroundStyle(.white.opacity(0.55))
-                    Text("  not bound")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.55))
-                }
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(Self.leader(configStore.config))
+            if !layoutMode.typed.isEmpty {
+                Text("  " + KeyToken.chordDisplay(layoutMode.typed))
             }
-            .font(Self.keysFont)
-
-            if showsCheatSheet, let bindings = configStore.config?.bindings, !bindings.isEmpty {
-                Divider().overlay(Color.white.opacity(0.25))
-                Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 3) {
-                    ForEach(Array(bindings.enumerated()), id: \.offset) { _, binding in
-                        GridRow {
-                            Text(KeyToken.chordDisplay(binding.tokens))
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            Text(binding.target.description)
-                                .font(.system(size: 12))
-                                .foregroundStyle(.white.opacity(0.7))
-                        }
-                    }
-                }
+            if let missed = layoutMode.missed {
+                Text("  " + KeyToken.chordDisplay(missed))
+                    .strikethrough()
+                    .foregroundStyle(.white.opacity(0.55))
+                Text("  not bound")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.55))
             }
         }
+        .font(Self.keysFont)
         .labelChrome()
     }
 }

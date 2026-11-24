@@ -15,7 +15,7 @@ describe Trellis::Config::Emitter do
         "placements": {"b": {"rect": [0.5, 0, 0.5, 1], "region": "g"}, "a": {"rect": {"x": 0, "y": 0, "w": 1, "h": 1}}},
         "regions": {"g": {"margins": {"right": 0.05}, "gap": 0.005}, "empty": {}},
         "groups": ["Zed", "60/40"],
-        "settings": {"cheat_sheet": "off", "label": {"screens": "main"}},
+        "settings": {"label": {"screens": "main"}, "leader": "ctrl+b"},
         "version": 1
       }
       JSON
@@ -24,10 +24,10 @@ describe Trellis::Config::Emitter do
       {
         "version": 1,
         "settings": {
-          "cheat_sheet": "off",
           "label": {
             "screens": "main"
-          }
+          },
+          "leader": "ctrl+b"
         },
         "groups": ["Zed", "60/40"],
         "regions": {

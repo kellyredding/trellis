@@ -60,10 +60,6 @@ enum Corner: String, Codable, CaseIterable {
     case bottomRight = "bottom-right"
 }
 
-enum CheatSheet: String, Codable, CaseIterable { case off, label, dropdown }
-
-enum DropdownScreens: String, Codable, CaseIterable { case off, all, main }
-
 struct Settings: Decodable, Equatable {
     struct Label: Decodable, Equatable {
         let screens: LabelScreens
@@ -77,22 +73,14 @@ struct Settings: Decodable, Equatable {
         }
     }
 
-    struct Dropdown: Decodable, Equatable {
-        let screens: DropdownScreens
-    }
-
     let leader: String
     let chordWaitMs: Int
     let label: Label
-    let cheatSheet: CheatSheet
-    let dropdown: Dropdown
 
     enum CodingKeys: String, CodingKey {
         case leader
         case chordWaitMs = "chord_wait_ms"
         case label
-        case cheatSheet = "cheat_sheet"
-        case dropdown
     }
 
     static let defaultLeader = "ctrl+s"

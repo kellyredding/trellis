@@ -121,8 +121,6 @@ if let config = fixture {
     check("label corner", config.settings.label.corner == .bottomRight)
     check("label linger_ms takes the default", config.settings.label.lingerMs == Settings.defaultLingerMs)
     check("the linger default is 2000 ms", Settings.defaultLingerMs == 2000)
-    check("cheat_sheet", config.settings.cheatSheet == .off)
-    check("dropdown screens", config.settings.dropdown.screens == .off)
     check("two regions", config.regions.count == 2)
     check("gutter margins", config.regions["gutter"]?.margins == Margins(top: 0, right: 0.05, bottom: 0, left: 0))
     check("gutter gap", config.regions["gutter"]?.gap == Gap(x: 0.005, y: 0.005))
@@ -138,7 +136,7 @@ if let config = fixture {
     check("a prefix binding is flagged", config.bindings[2].prefix && !config.bindings[1].prefix)
     check("a placement target decodes", config.bindings[1].target == .placement("left-half"))
     check("an action target decodes", config.bindings[4].target == .action(.screenEast))
-    check("warnings decode", config.warnings == ["l waits: it starts l l"])
+    check("a waiting chord is not a warning", config.warnings.isEmpty)
     check("a placement's region resolves", config.region(for: config.placements["left-half"]!) == config.regions["gutter"])
     check("no region resolves to none", config.region(for: config.placements["right-half-full"]!) == Region.none)
     check("groups decode in order", config.groups == ["Halves", "Thirds", "Displays"])
@@ -149,13 +147,24 @@ if let config = fixture {
     check("sections follow groups order", config.bindingSections.map(\.group) == ["Halves", "Thirds", "Displays"])
     check("a section keeps export order",
           config.bindingSections.first?.bindings.map(\.keys) == ["ctrl+cmd+h", "h", "l", "l l"])
+
+    let grid = BindingsGrid(tilesPerRow: 5, tileHeight: 80, tileSpacing: 8,
+                            headerHeight: 16, headerSpacing: 6, sectionSpacing: 12)
+    check("every fixture section has tiles", config.bindingSections.allSatisfy { !$0.bindings.isEmpty })
+    check("each fixture section takes one row", config.bindingSections.map(grid.rows) == [1, 1, 1])
+    check("the grid's height adds sections and the space between them",
+          near(grid.height(config.bindingSections), 3 * (16 + 6 + 80) + 2 * 12))
+    let six = BindingSection(group: "All", bindings: config.bindings)
+    check("six tiles take two rows of five", grid.rows(six) == 2 && grid.chunked(six.bindings).map(\.count) == [5, 1])
+    check("rows are spaced but not padded", near(grid.height(six), 16 + 6 + 2 * 80 + 8))
+    check("no sections take no height", grid.height([]) == 0)
 }
 
 func decodes(_ json: String) -> Bool { (try? TrellisConfig.decode(Data(json.utf8))) != nil }
 
 let minimal = """
 {"version":1,"source":"starter","path":"x","settings":{"leader":"ctrl+s","chord_wait_ms":400,
-"label":{"screens":"all","corner":"top-left","linger_ms":0},"cheat_sheet":"label","dropdown":{"screens":"all"}},
+"label":{"screens":"all","corner":"top-left","linger_ms":0}},
 "groups":["G","Empty"],"regions":{},"placements":{},"actions":{},"bindings":[BINDING],"warnings":[]}
 """
 check("a minimal export decodes",

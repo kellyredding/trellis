@@ -5,7 +5,7 @@ module Trellis
     module SettingsCommand
       extend self
 
-      KEYS = ["leader", "chord_wait_ms", "label.screens", "label.corner", "label.linger_ms", "cheat_sheet", "dropdown.screens"]
+      KEYS = ["leader", "chord_wait_ms", "label.screens", "label.corner", "label.linger_ms"]
 
       HELP = <<-TEXT
         trellis settings list | get KEY | set KEY VALUE
@@ -19,8 +19,6 @@ module Trellis
           label.corner       top-left, top-right, bottom-left, bottom-right
           label.linger_ms    How long the label shows a typed chord's result,
                              0 (off) to 3000 (default 2000)
-          cheat_sheet        off, label, dropdown
-          dropdown.screens   off, all, main
 
         set validates the whole config and rewrites the file (see
         `trellis config --help`).
@@ -40,13 +38,11 @@ module Trellis
 
       def value(settings : Config::Settings, key : String) : String | Int64
         case key
-        when "leader"          then settings.leader
-        when "chord_wait_ms"   then settings.chord_wait_ms
-        when "label.screens"   then settings.label_screens
-        when "label.corner"    then settings.label_corner
-        when "label.linger_ms" then settings.label_linger_ms
-        when "cheat_sheet"     then settings.cheat_sheet
-        else                        settings.dropdown_screens
+        when "leader"        then settings.leader
+        when "chord_wait_ms" then settings.chord_wait_ms
+        when "label.screens" then settings.label_screens
+        when "label.corner"  then settings.label_corner
+        else                      settings.label_linger_ms
         end
       end
 
@@ -120,9 +116,7 @@ module Trellis
         when "chord_wait_ms"   then JSON::Any.new(whole(key, raw, Config::Validator::CHORD_WAIT_MS))
         when "label.linger_ms" then JSON::Any.new(whole(key, raw, Config::Validator::LINGER_MS))
         when "label.screens"   then JSON::Any.new(choice(key, raw, Config::Validator::LABEL_SCREENS))
-        when "label.corner"    then JSON::Any.new(choice(key, raw, Config::Validator::LABEL_CORNERS))
-        when "cheat_sheet"     then JSON::Any.new(choice(key, raw, Config::Validator::CHEAT_SHEETS))
-        else                        JSON::Any.new(choice(key, raw, Config::Validator::DROPDOWN_SCREENS))
+        else                        JSON::Any.new(choice(key, raw, Config::Validator::LABEL_CORNERS))
         end
       end
 

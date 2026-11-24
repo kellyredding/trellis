@@ -15,12 +15,10 @@ module Trellis
     class Validator
       TOLERANCE = 1e-9
 
-      LABEL_SCREENS    = ["all", "main", "target"]
-      LABEL_CORNERS    = ["top-left", "top-right", "bottom-left", "bottom-right"]
-      CHEAT_SHEETS     = ["off", "label", "dropdown"]
-      DROPDOWN_SCREENS = ["off", "all", "main"]
-      CHORD_WAIT_MS    = 50_i64..2000_i64
-      LINGER_MS        = 0_i64..3000_i64
+      LABEL_SCREENS = ["all", "main", "target"]
+      LABEL_CORNERS = ["top-left", "top-right", "bottom-left", "bottom-right"]
+      CHORD_WAIT_MS = 50_i64..2000_i64
+      LINGER_MS     = 0_i64..3000_i64
 
       def self.validate(tree : JSON::Any, source : Source, path : Path) : Result
         new(tree, source, path).run
@@ -48,16 +46,11 @@ module Trellis
         placement_groups = placements.to_h { |placement| {placement.name, placement.group} }
         bindings = check_bindings(root["bindings"]?, settings.leader, placement_tree.keys, placement_groups, actions)
 
-        prefixed = Set(Array(String)).new
-        warnings = [] of String
-        bindings.each do |shorter|
-          longer = bindings.select { |binding| prefix?(shorter.chord, binding.chord) }
-          next if longer.empty?
-          prefixed << shorter.chord
-          warnings << "#{shorter.keys} waits: it starts #{longer.join(", ", &.keys)}"
+        bindings = bindings.map do |shorter|
+          shorter.copy_with(prefix: bindings.any? { |binding| prefix?(shorter.chord, binding.chord) })
         end
-        bindings = bindings.map { |binding| binding.copy_with(prefix: prefixed.includes?(binding.chord)) }
 
+        warnings = [] of String
         groups.each do |group|
           next if placement_groups.values.includes?(group) || actions.values.includes?(group)
           warnings << "group #{group.inspect} is not used by any placement or action; " \
@@ -101,7 +94,7 @@ module Trellis
         tree = object(value, "settings")
         return defaults unless tree
 
-        allowed_keys("settings", tree, ["leader", "chord_wait_ms", "label", "cheat_sheet", "dropdown"])
+        allowed_keys("settings", tree, ["leader", "chord_wait_ms", "label"])
 
         leader = defaults.leader
         if raw = tree["leader"]?
@@ -144,17 +137,12 @@ module Trellis
           end
         end
 
-        dropdown = object(tree["dropdown"]?, "settings.dropdown") || {} of String => JSON::Any
-        allowed_keys("settings.dropdown", dropdown, ["screens"])
-
         Settings.new(
           leader: leader,
           chord_wait_ms: wait,
           label_screens: choice("settings.label.screens", label["screens"]?, LABEL_SCREENS, defaults.label_screens),
           label_corner: choice("settings.label.corner", label["corner"]?, LABEL_CORNERS, defaults.label_corner),
           label_linger_ms: linger,
-          cheat_sheet: choice("settings.cheat_sheet", tree["cheat_sheet"]?, CHEAT_SHEETS, defaults.cheat_sheet),
-          dropdown_screens: choice("settings.dropdown.screens", dropdown["screens"]?, DROPDOWN_SCREENS, defaults.dropdown_screens),
         )
       end
 

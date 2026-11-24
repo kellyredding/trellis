@@ -81,10 +81,6 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
       "screens": "all",
       "corner": "bottom-right",
       "linger_ms": 2000
-    },
-    "cheat_sheet": "off",
-    "dropdown": {
-      "screens": "off"
     }
   },
   "groups": ["Halves", "Full screen", "Displays"],
@@ -131,8 +127,6 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
 | `label.screens` | `all` | `all`, `main`, `target` |
 | `label.corner` | `bottom-right` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
 | `label.linger_ms` | `2000` | a whole number, `0`–`3000`; `0` turns the confirmation off |
-| `cheat_sheet` | `off` | `off`, `label`, `dropdown` |
-| `dropdown.screens` | `off` | `off`, `all`, `main` |
 
 After a chord typed in layout mode runs, the label stays up for
 `label.linger_ms` on the same screens and in the same corner, showing the
@@ -190,13 +184,11 @@ existing order, arrays of plain values on one line, and a trailing newline.
 - An error about a missing or unknown group names the command that fixes it,
   e.g. ``placements.left-40: no group; set one with `trellis placements set
   left-40 --group NAME` ``.
-- A chord that is also the prefix of a longer chord is a **warning**, not an
-  error: it is valid, and it waits. One warning per waiting chord, worded
-  exactly `<prefix> waits: it starts <longer>, <longer>, …` (canonical
-  chords, the longer ones comma-separated), sorted by prefix and then by
-  longer chord.
-- A group no placement or action uses is a **warning**, after the prefix
-  warnings and in `groups` order: ``group "<name>" is not used by any
+- A chord that is also the prefix of a longer chord is valid, and it waits.
+  It is neither an error nor a warning; the export flags it (`prefix`), and
+  `trellis resolve` and `trellis bindings list` say it waits.
+- A group no placement or action uses is a **warning**, in `groups` order:
+  ``group "<name>" is not used by any
   placement or action; use it with `trellis placements set NAME --group
   <name>`, or remove it with `trellis groups remove <name>` ``.
 
@@ -214,9 +206,7 @@ canonical chord, each carrying its target's group.
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 400,
-    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 2000 },
-    "cheat_sheet": "off",
-    "dropdown": { "screens": "off" }
+    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 2000 }
   },
   "groups": ["Halves", "Full screen", "Displays"],
   "regions": {

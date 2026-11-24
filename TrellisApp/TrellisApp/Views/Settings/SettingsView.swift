@@ -44,8 +44,6 @@ enum SettingKey {
     static let labelScreens = "label.screens"
     static let labelCorner = "label.corner"
     static let labelLingerMs = "label.linger_ms"
-    static let cheatSheet = "cheat_sheet"
-    static let dropdownScreens = "dropdown.screens"
 }
 
 // MARK: - General
@@ -197,17 +195,6 @@ struct LayoutModeSettings: View {
         .disabled(settings == nil)
         .onAppear(perform: sync)
         .onChange(of: model.configStore.config) { _, _ in sync() }
-
-        SettingsCard(title: "Cheat sheet") {
-            picker("Show bindings", key: SettingKey.cheatSheet, value: settings?.cheatSheet, labels: [
-                .off: "Off", .label: "In the label", .dropdown: "In the dropdown",
-            ])
-            picker("Dropdown on", key: SettingKey.dropdownScreens, value: settings?.dropdown.screens, labels: [
-                .off: "Off", .all: "Every screen", .main: "The main screen",
-            ])
-            SettingsCaption("The dropdown under the menu-bar icon is not built yet; these settings are saved for it.")
-        }
-        .disabled(settings == nil)
     }
 
     private func sync() {
@@ -238,24 +225,17 @@ struct LayoutModeSettings: View {
 /// taller than that scrolls.
 struct BindingsSettings: View {
     @ObservedObject var model: AppModel
-    @State private var contentHeight: CGFloat = 0
 
-    private let columns = Array(
-        repeating: GridItem(.fixed(SettingsMetrics.tileWidth), spacing: SettingsMetrics.tileSpacing, alignment: .top),
-        count: SettingsMetrics.tilesPerRow
-    )
+    private let grid = SettingsMetrics.bindingsGrid
 
     var body: some View {
         if let config = model.configStore.config {
+            let sections = config.bindingSections
             SettingsCard(title: "Bindings (\(config.bindings.count))") {
-                ScrollView {
-                    sections(config)
-                        .background(GeometryReader { proxy in
-                            Color.clear.preference(key: BindingsHeightKey.self, value: proxy.size.height)
-                        })
+                ScrollView(.vertical) {
+                    content(sections, config: config)
                 }
-                .frame(height: min(contentHeight, Self.maxHeight))
-                .onPreferenceChange(BindingsHeightKey.self) { contentHeight = $0 }
+                .frame(height: min(CGFloat(grid.height(sections)), Self.maxHeight))
             }
             SettingsCaption("Bindings are read-only here. Change them with `trellis bind` or by asking an agent.")
         } else {
@@ -263,15 +243,21 @@ struct BindingsSettings: View {
         }
     }
 
-    private func sections(_ config: TrellisConfig) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(config.bindingSections, id: \.group) { section in
-                VStack(alignment: .leading, spacing: 6) {
+    private func content(_ sections: [BindingSection], config: TrellisConfig) -> some View {
+        VStack(alignment: .leading, spacing: grid.sectionSpacing) {
+            ForEach(sections, id: \.group) { section in
+                VStack(alignment: .leading, spacing: grid.headerSpacing) {
                     Text(section.group)
                         .font(.system(size: 12, weight: .semibold))
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: SettingsMetrics.tileSpacing) {
-                        ForEach(section.bindings, id: \.keys) { binding in
-                            BindingTile(binding: binding, config: config)
+                        .lineLimit(1)
+                        .frame(height: grid.headerHeight)
+                    VStack(alignment: .leading, spacing: SettingsMetrics.tileSpacing) {
+                        ForEach(Array(grid.chunked(section.bindings).enumerated()), id: \.offset) { _, row in
+                            HStack(spacing: SettingsMetrics.tileSpacing) {
+                                ForEach(row, id: \.keys) { binding in
+                                    BindingTile(binding: binding, config: config)
+                                }
+                            }
                         }
                     }
                 }
@@ -285,11 +271,6 @@ struct BindingsSettings: View {
     @MainActor private static var maxHeight: CGFloat {
         max(200, (NSScreen.main?.visibleFrame.height ?? 800) - 260)
     }
-}
-
-private struct BindingsHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 /// One binding: its chord, what it does to a window, and its target's name.
@@ -322,7 +303,7 @@ struct BindingTile: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 6)
-        .frame(width: SettingsMetrics.tileWidth)
+        .frame(width: SettingsMetrics.tileWidth, height: SettingsMetrics.bindingsGrid.tileHeight)
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
     }
 }
