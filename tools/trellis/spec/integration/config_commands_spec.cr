@@ -3,6 +3,7 @@ require "../spec_helper"
 private GUTTER_CONFIG = <<-JSON
   {
     "version": 1,
+    "groups": ["Halves", "Full screen"],
     "regions": {
       "gutter": {
         "margins": {
@@ -14,10 +15,12 @@ private GUTTER_CONFIG = <<-JSON
     "placements": {
       "left-half": {
         "rect": [0, 0, 0.5, 1],
-        "region": "gutter"
+        "region": "gutter",
+        "group": "Halves"
       },
       "maximize": {
-        "rect": [0, 0, 1, 1]
+        "rect": [0, 0, 1, 1],
+        "group": "Full screen"
       }
     },
     "bindings": {
@@ -189,9 +192,13 @@ describe "config mutations" do
         ["bind", "ctrl+s x", "maximize"],
         ["settings", "set", "chord_wait_ms", "9000"],
         ["settings", "set", "label.corner", "middle"],
-        ["placements", "add", "Bad Name", "--rect", "0,0,1,1"],
-        ["placements", "add", "x", "--rect", "0,0,1,1", "--region", "missing"],
+        ["placements", "add", "Bad Name", "--rect", "0,0,1,1", "--group", "Halves"],
+        ["placements", "add", "x", "--rect", "0,0,1,1", "--region", "missing", "--group", "Halves"],
+        ["placements", "add", "x", "--rect", "0,0,1,1", "--group", "Nope"],
         ["placements", "set", "left-half", "--region", "missing"],
+        ["placements", "set", "left-half", "--group", "Nope"],
+        ["actions", "set", "screen-east", "--group", "Nope"],
+        ["bind", "right", "screen-east"],
         ["regions", "add", "wide", "--margin-left", "0.5", "--margin-right", "0.5"],
       ].each do |args|
         result = SpecHelper.run(sandbox, args)
@@ -215,12 +222,13 @@ describe "config mutations" do
   it "adds, sets, renames and removes placements" do
     SpecHelper.sandbox do |sandbox|
       sandbox.write_config(GUTTER_CONFIG)
-      SpecHelper.run(sandbox, ["placements", "add", "right-half", "--rect", "0.5,0,0.5,1", "--region", "gutter"]).exit_code.should eq(0)
-      sandbox.read_config.should contain(%("right-half": {\n      "rect": [0.5, 0, 0.5, 1],\n      "region": "gutter"\n    }))
+      SpecHelper.run(sandbox, ["placements", "add", "right-half", "--rect", "0.5,0,0.5,1", "--region", "gutter", "--group", "Halves"]).exit_code.should eq(0)
+      sandbox.read_config.should contain(%("right-half": {\n      "rect": [0.5, 0, 0.5, 1],\n      "region": "gutter",\n      "group": "Halves"\n    }))
 
       SpecHelper.run(sandbox, ["placements", "set", "right-half", "--no-region"]).exit_code.should eq(0)
       shown = SpecHelper.run(sandbox, ["placements", "show", "right-half", "--json"]).json
       shown["region"].raw.should be_nil
+      shown["group"].should eq("Halves")
 
       SpecHelper.run(sandbox, ["bind", "l", "right-half"]).exit_code.should eq(0)
       renamed = SpecHelper.run(sandbox, ["placements", "rename", "right-half", "east-half"])
@@ -278,8 +286,8 @@ describe "config mutations" do
   it "gets, sets and exports label.linger_ms, refusing a bad value as a usage error" do
     SpecHelper.sandbox do |sandbox|
       sandbox.write_config(GUTTER_CONFIG)
-      SpecHelper.run(sandbox, ["settings", "get", "label.linger_ms"]).stdout.should eq("1500\n")
-      SpecHelper.run(sandbox, ["settings", "list"]).stdout.should match(/label\.linger_ms\s+1500\s+\(default\)/)
+      SpecHelper.run(sandbox, ["settings", "get", "label.linger_ms"]).stdout.should eq("2000\n")
+      SpecHelper.run(sandbox, ["settings", "list"]).stdout.should match(/label\.linger_ms\s+2000\s+\(default\)/)
 
       ["3001", "-1", "soon", "1.5"].each do |bad|
         result = SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", bad])
@@ -294,8 +302,8 @@ describe "config mutations" do
       sandbox.read_config.should contain(%("label": {\n      "linger_ms": 0\n    }))
       SpecHelper.run(sandbox, ["settings", "get", "label.linger_ms", "--json"]).json["value"].should eq(0)
 
-      SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", "2000"]).exit_code.should eq(0)
-      SpecHelper.run(sandbox, ["config", "export", "--json"]).json["settings"]["label"]["linger_ms"].should eq(2000)
+      SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", "2500"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["config", "export", "--json"]).json["settings"]["label"]["linger_ms"].should eq(2500)
     end
   end
 
@@ -314,6 +322,161 @@ describe "config mutations" do
 
       SpecHelper.run(sandbox, ["resolve", "q", "--json"], env).json["target"].raw.should be_nil
       SpecHelper.run(sandbox, ["resolve", "escape"], env).exit_code.should eq(2)
+    end
+  end
+end
+
+describe "groups" do
+  it "add needs --group for a placement, as a usage error naming it" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      result = SpecHelper.run(sandbox, ["placements", "add", "wide", "--rect", "0,0,1,1"])
+      result.exit_code.should eq(2)
+      result.stderr.should contain("add needs --group NAME")
+      sandbox.read_config.should eq(GUTTER_CONFIG)
+    end
+  end
+
+  it "reports a placement without a group, with the command that fixes it" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG.sub(%(,\n      "group": "Full screen"), ""))
+      result = SpecHelper.run(sandbox, ["config", "validate"])
+      result.exit_code.should eq(1)
+      result.stderr.should contain("placements.maximize: no group; set one with `trellis placements set maximize --group NAME`")
+    end
+  end
+
+  it "sets a placement's group and shows it in list and show" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      SpecHelper.run(sandbox, ["placements", "set", "maximize", "--group", " Halves "]).exit_code.should eq(0)
+      sandbox.read_config.should contain(%("rect": [0, 0, 1, 1],\n      "group": "Halves"))
+      SpecHelper.run(sandbox, ["placements", "show", "maximize"]).stdout.should contain("  group     Halves\n")
+      SpecHelper.run(sandbox, ["placements", "list"]).stdout.should match(/^maximize\s+\[0, 0, 1, 1\]\s+-\s+Halves\s+return$/m)
+      SpecHelper.run(sandbox, ["placements", "list", "--json"]).json["placements"][1]["group"].should eq("Halves")
+
+      warned = SpecHelper.run(sandbox, ["config", "validate"])
+      warned.exit_code.should eq(0)
+      warned.stdout.should contain(%(warning: group "Full screen" is not used by any placement or action; ))
+    end
+  end
+
+  it "adds, places, moves, renames and removes groups" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      groups = -> { SpecHelper.run(sandbox, ["groups", "list", "--json"]).json["groups"].as_a.map(&.["name"].as_s) }
+
+      SpecHelper.run(sandbox, ["groups", "add", "Displays"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["groups", "add", "60/40", "--after", "Halves"]).exit_code.should eq(0)
+      added = SpecHelper.run(sandbox, ["groups", "add", "Corners", "--first", "--json"])
+      added.exit_code.should eq(0)
+      added.json["groups"].should eq(JSON.parse(%(["Corners", "Halves", "60/40", "Full screen", "Displays"])))
+      sandbox.read_config.should contain(%(  "groups": ["Corners", "Halves", "60/40", "Full screen", "Displays"],\n))
+
+      SpecHelper.run(sandbox, ["groups", "add", "Halves"]).stderr.should contain(%(a group named "Halves" already exists))
+      SpecHelper.run(sandbox, ["groups", "add", "  "]).exit_code.should eq(2)
+      SpecHelper.run(sandbox, ["groups", "add", "X", "--after", "Nope"]).stderr.should contain(%(no group named "Nope"))
+      SpecHelper.run(sandbox, ["groups", "add", "X", "--after", "Halves", "--first"]).exit_code.should eq(2)
+
+      SpecHelper.run(sandbox, ["groups", "move", "Corners", "--after", "60/40"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["groups", "move", "Displays", "--first"]).exit_code.should eq(0)
+      groups.call.should eq(["Displays", "Halves", "60/40", "Corners", "Full screen"])
+      SpecHelper.run(sandbox, ["groups", "move", "Corners"]).exit_code.should eq(2)
+
+      SpecHelper.run(sandbox, ["actions", "set", "screen-east", "--group", "Halves"]).exit_code.should eq(0)
+      renamed = SpecHelper.run(sandbox, ["groups", "rename", "Halves", "Sides"])
+      renamed.exit_code.should eq(0)
+      renamed.stdout.should contain("renamed group Halves to Sides (moved 1 placement and 1 action)")
+      written = sandbox.read_config
+      written.should contain(%("region": "gutter",\n      "group": "Sides"))
+      written.should contain(%("screen-east": {\n      "group": "Sides"\n    }))
+      written.should_not contain("Halves")
+
+      refused = SpecHelper.run(sandbox, ["groups", "remove", "Sides"])
+      refused.exit_code.should eq(1)
+      refused.stderr.should contain(%(refused: group "Sides" is used by left-half, screen-east; move them to another group first))
+      SpecHelper.run(sandbox, ["groups", "remove", "Corners"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["groups", "remove", "Corners"]).stderr.should contain(%(no group named "Corners"))
+
+      listed = SpecHelper.run(sandbox, ["groups", "list"]).stdout
+      listed.should match(/^Sides\s+left-half\s+screen-east\s+1$/m)
+      listed.should match(/^Displays\s+-\s+-\s+0$/m)
+    end
+  end
+
+  it "creates groups in canonical position in a config that has none" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(%({"bindings": {}, "version": 1}\n))
+      SpecHelper.run(sandbox, ["groups", "add", "Full screen"]).exit_code.should eq(0)
+      sandbox.read_config.should eq(%({\n  "version": 1,\n  "groups": ["Full screen"],\n  "bindings": {}\n}\n))
+    end
+  end
+end
+
+describe "actions" do
+  it "lists every built-in action with its group and bindings, and sets a group" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      listed = SpecHelper.run(sandbox, ["actions", "list"]).stdout
+      listed.should match(/^screen-east\s+none\s+not bound$/m)
+      listed.should match(/^screen-west\s+none\s+not bound$/m)
+
+      refused = SpecHelper.run(sandbox, ["bind", "right", "screen-east"])
+      refused.exit_code.should eq(1)
+      refused.stderr.should contain("refused: screen-east has no group; run `trellis actions set screen-east --group NAME` first")
+      sandbox.read_config.should eq(GUTTER_CONFIG)
+
+      SpecHelper.run(sandbox, ["groups", "add", "Displays"]).exit_code.should eq(0)
+      set = SpecHelper.run(sandbox, ["actions", "set", "screen-east", "--group", "Displays", "--json"])
+      set.exit_code.should eq(0)
+      set.json["action"]["group"].should eq("Displays")
+      sandbox.read_config.should contain(%(  "actions": {\n    "screen-east": {\n      "group": "Displays"\n    }\n  },\n  "bindings"))
+
+      SpecHelper.run(sandbox, ["bind", "right", "screen-east"]).exit_code.should eq(0)
+      actions = SpecHelper.run(sandbox, ["actions", "list", "--json"]).json["actions"]
+      actions[0].should eq(JSON.parse(%({"name": "screen-east", "group": "Displays", "bound": true, "bindings": ["right"]})))
+      actions[1].should eq(JSON.parse(%({"name": "screen-west", "group": null, "bound": false, "bindings": []})))
+
+      export = SpecHelper.run(sandbox, ["config", "export", "--json"]).json
+      export["actions"].should eq(JSON.parse(%({"screen-east": {"group": "Displays"}})))
+    end
+  end
+
+  it "refuses an unknown action and a set without --group" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      unknown = SpecHelper.run(sandbox, ["actions", "set", "screen-north", "--group", "Halves"])
+      unknown.exit_code.should eq(1)
+      unknown.stderr.should contain(%(no built-in action named "screen-north"))
+      SpecHelper.run(sandbox, ["actions", "set", "screen-east"]).exit_code.should eq(2)
+      sandbox.read_config.should eq(GUTTER_CONFIG)
+    end
+  end
+end
+
+describe "trellis bindings list" do
+  it "prints bindings under group headings in groups order" do
+    SpecHelper.sandbox do |sandbox|
+      result = SpecHelper.run(sandbox, ["bindings", "list"])
+      result.exit_code.should eq(0)
+      lines = result.stdout.lines
+      headings = lines.reject(&.starts_with?(" "))
+      headings.should eq(["Halves", "Corners", "60/40", "Full screen", "Displays"])
+      lines[lines.index!("Displays") + 1].should match(/^  left\s+screen-west\s+action$/)
+      lines[lines.index!("Full screen") + 1].should match(/^  return\s+maximize\s+placement$/)
+
+      json = SpecHelper.run(sandbox, ["bindings", "list", "--json"]).json
+      json["groups"].as_a.size.should eq(5)
+      json["bindings"].as_a.find! { |binding| binding["keys"] == "ctrl+h" }["group"].should eq("60/40")
+    end
+  end
+
+  it "skips groups with no bindings" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      SpecHelper.run(sandbox, ["bindings", "list"]).stdout.lines.reject(&.starts_with?(" ")).should eq(["Halves", "Full screen"])
+      SpecHelper.run(sandbox, ["unbind", "return"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["bindings", "list"]).stdout.lines.reject(&.starts_with?(" ")).should eq(["Halves"])
     end
   end
 end

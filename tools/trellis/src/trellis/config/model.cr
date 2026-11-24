@@ -1,7 +1,7 @@
 module Trellis
   module Config
     BUILT_IN_ACTIONS = ["screen-east", "screen-west"]
-    SECTIONS         = ["version", "settings", "regions", "placements", "bindings"]
+    SECTIONS         = ["version", "settings", "groups", "regions", "placements", "actions", "bindings"]
     NAME_PATTERN     = /\A[a-z0-9][a-z0-9-]*\z/
 
     enum Source
@@ -18,7 +18,7 @@ module Trellis
       chord_wait_ms : Int64 = 400_i64,
       label_screens : String = "all",
       label_corner : String = "bottom-right",
-      label_linger_ms : Int64 = 1500_i64,
+      label_linger_ms : Int64 = 2000_i64,
       cheat_sheet : String = "off",
       dropdown_screens : String = "off"
 
@@ -32,9 +32,10 @@ module Trellis
       end
     end
 
-    record Placement, name : String, rect : Rect, region : String?
+    record Placement, name : String, rect : Rect, region : String?, group : String
 
-    record Binding, keys : String, chord : Array(String), placement : String?, action : String?, prefix : Bool do
+    record Binding, keys : String, chord : Array(String), placement : String?, action : String?, prefix : Bool,
+      group : String do
       def target_name : String
         placement || action || ""
       end
@@ -51,12 +52,28 @@ module Trellis
       source : Source,
       path : Path,
       settings : Settings,
+      groups : Array(String),
       regions : Array(Region),
       placements : Array(Placement),
+      actions : Hash(String, String),
       bindings : Array(Binding),
       warnings : Array(String) do
       def placement?(name : String) : Placement?
         placements.find { |placement| placement.name == name }
+      end
+
+      # The placements, then the built-in actions, that use the group.
+      def group_users(group : String) : {Array(String), Array(String)}
+        {placements.select { |placement| placement.group == group }.map(&.name),
+         actions.select { |_, used| used == group }.keys}
+      end
+
+      # The bindings in each group with any, in `groups` order.
+      def bindings_by_group : Array({String, Array(Binding)})
+        groups.compact_map do |group|
+          members = bindings.select { |binding| binding.group == group }
+          members.empty? ? nil : {group, members}
+        end
       end
 
       def region?(name : String) : Region?

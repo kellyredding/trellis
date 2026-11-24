@@ -80,13 +80,14 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
     "label": {
       "screens": "all",
       "corner": "bottom-right",
-      "linger_ms": 1500
+      "linger_ms": 2000
     },
     "cheat_sheet": "off",
     "dropdown": {
       "screens": "off"
     }
   },
+  "groups": ["Halves", "Full screen", "Displays"],
   "regions": {
     "gutter": {
       "margins": {
@@ -98,10 +99,21 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
   "placements": {
     "left-half": {
       "rect": [0, 0, 0.5, 1],
-      "region": "gutter"
+      "region": "gutter",
+      "group": "Halves"
+    },
+    "right-half-full": {
+      "rect": [0.5, 0, 0.5, 1],
+      "group": "Halves"
     },
     "maximize": {
-      "rect": [0, 0, 1, 1]
+      "rect": [0, 0, 1, 1],
+      "group": "Full screen"
+    }
+  },
+  "actions": {
+    "screen-east": {
+      "group": "Displays"
     }
   },
   "bindings": {
@@ -118,7 +130,7 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
 | `chord_wait_ms` | `400` | a whole number, `50`–`2000` |
 | `label.screens` | `all` | `all`, `main`, `target` |
 | `label.corner` | `bottom-right` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
-| `label.linger_ms` | `1500` | a whole number, `0`–`3000`; `0` turns the confirmation off |
+| `label.linger_ms` | `2000` | a whole number, `0`–`3000`; `0` turns the confirmation off |
 | `cheat_sheet` | `off` | `off`, `label`, `dropdown` |
 | `dropdown.screens` | `off` | `off`, `all`, `main` |
 
@@ -135,7 +147,13 @@ A region's `margins` are fractions of the visible frame, per edge (`top`,
 `right`, `bottom`, `left`); its `gap` is a number, or `{"x": 0.005, "y":
 0.025}`.
 
-Every key is optional; absent settings take the defaults above. When the
+`groups` lists the group names in display order: the app's Bindings tab shows
+one section per group, in this order, holding the bindings whose target is in
+it. Every placement names its `group`, and so does every built-in action a
+binding targets, in `actions`. Groups come only from the config; nothing is
+grouped by shape.
+
+Every top-level key is optional; absent settings take the defaults above. When the
 config file does not exist, the CLI uses the starter config embedded in it
 (`config/starter.json` in the repository); `trellis config init --starter`
 writes that out.
@@ -153,27 +171,39 @@ existing order, arrays of plain values on one line, and a trailing newline.
   rather than ignored.
 - `version` is `1`; a missing `version` reads as `1`.
 - Settings: each value is one the table above allows.
+- Groups: a list of strings, each non-empty, without leading or trailing
+  spaces, and listed once; any other characters are allowed (`"60/40"`).
 - Regions: names match `[a-z0-9][a-z0-9-]*`; each margin and each gap is a
   number in `0…0.5`; per axis the two margins sum to less than `1`; a gap
   object with only `x` or `y` takes `0` for the other.
 - Placements: `rect` is `[x, y, w, h]` (or `{x, y, w, h}`) with `x, y ≥ 0`,
   `w, h > 0`, `x + w ≤ 1`, `y + h ≤ 1` (to within `1e-9`); `region`, when
-  given, names a defined region. Names match `[a-z0-9][a-z0-9-]*` and may not
-  be a built-in action.
+  given, names a defined region; `group` is required and names an entry in
+  `groups`. Names match `[a-z0-9][a-z0-9-]*` and may not be a built-in action.
+- Actions: each key is a built-in action; each value is an object whose
+  required `group` names an entry in `groups`.
 - Bindings: each key parses as a chord (modifiers before the key, tokens
   separated by single spaces); each value names a placement or a built-in
-  action. Built-in actions: `screen-east`, `screen-west`. Two spellings of
-  the same canonical chord (`ctrl+h` and `control+h`) are an error.
+  action, and an action must have an `actions` entry. Built-in actions:
+  `screen-east`, `screen-west`. Two spellings of the same canonical chord
+  (`ctrl+h` and `control+h`) are an error.
+- An error about a missing or unknown group names the command that fixes it,
+  e.g. ``placements.left-40: no group; set one with `trellis placements set
+  left-40 --group NAME` ``.
 - A chord that is also the prefix of a longer chord is a **warning**, not an
   error: it is valid, and it waits. One warning per (prefix, longer chord)
   pair, worded exactly `"<prefix>" is the start of "<longer>", so it waits
   before running`, sorted by prefix then longer chord.
+- A group no placement or action uses is a **warning**, after the prefix
+  warnings and in `groups` order: ``group "<name>" is not used by any
+  placement or action; use it with `trellis placements set NAME --group
+  <name>`, or remove it with `trellis groups remove <name>` ``.
 
 ## Config export (`trellis config export --json`)
 
 The normalized config: defaults filled in, regions fully expanded, rects as
 objects, chords tokenized and canonical, bindings as a list sorted by
-canonical chord.
+canonical chord, each carrying its target's group.
 
 ```json
 {
@@ -183,10 +213,11 @@ canonical chord.
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 400,
-    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 1500 },
+    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 2000 },
     "cheat_sheet": "off",
     "dropdown": { "screens": "off" }
   },
+  "groups": ["Halves", "Full screen", "Displays"],
   "regions": {
     "gutter": {
       "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
@@ -194,13 +225,17 @@ canonical chord.
     }
   },
   "placements": {
-    "left-half": { "rect": { "x": 0, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter" },
-    "maximize":  { "rect": { "x": 0, "y": 0, "w": 1, "h": 1 }, "region": null }
+    "left-half": { "rect": { "x": 0, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter", "group": "Halves" },
+    "right-half-full": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": null, "group": "Halves" },
+    "maximize":  { "rect": { "x": 0, "y": 0, "w": 1, "h": 1 }, "region": null, "group": "Full screen" }
+  },
+  "actions": {
+    "screen-east": { "group": "Displays" }
   },
   "bindings": [
-    { "keys": "h", "chord": ["h"], "target": { "placement": "left-half" }, "prefix": false },
-    { "keys": "l l", "chord": ["l", "l"], "target": { "placement": "right-half-full" }, "prefix": false },
-    { "keys": "right", "chord": ["right"], "target": { "action": "screen-east" }, "prefix": false }
+    { "keys": "h", "chord": ["h"], "target": { "placement": "left-half" }, "group": "Halves", "prefix": false },
+    { "keys": "l l", "chord": ["l", "l"], "target": { "placement": "right-half-full" }, "group": "Halves", "prefix": false },
+    { "keys": "right", "chord": ["right"], "target": { "action": "screen-east" }, "group": "Displays", "prefix": false }
   ],
   "warnings": []
 }
@@ -208,7 +243,10 @@ canonical chord.
 
 - `source` is `"file"` or `"starter"` (no config file exists).
 - `path` is the configured path, not the symlink's target.
+- `groups` is in config order, which is display order.
+- `actions` holds only the built-in actions the config lists.
 - `target` has exactly one of `placement` or `action`.
+- A binding's `group` is its target placement's or action's group.
 - `prefix` is true when a longer binding begins with this chord.
 - An invalid config exits non-zero with the errors on stderr; the app keeps
   its last good config and shows the error.

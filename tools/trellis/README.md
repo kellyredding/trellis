@@ -28,8 +28,13 @@ with `--json` the failure is also printed on stdout as
 focused window), `--window ID`, or `--app NAME [--title REGEX]`.
 
 **Config** (no app needed): `config path|show|validate|export|init`,
-`placements`, `regions`, `bindings`, `bind`, `unbind`, `resolve`,
-`settings`.
+`groups`, `placements`, `actions`, `regions`, `bindings`, `bind`, `unbind`,
+`resolve`, `settings`.
+
+Every placement belongs to a group (`placements add NAME --rect … --group G`),
+and a built-in action needs one (`actions set screen-east --group G`) before a
+chord can be bound to it. `groups list|add|rename|remove|move` manages the
+ordered list; `bindings list` prints the bindings under their groups.
 
 **Health:** `doctor`, `version`, `update` (not available until release
 packaging exists).
@@ -53,7 +58,8 @@ The config is a JSON file. Commands that change it load it (the built-in
 starter when no file exists), apply the change, validate the whole result,
 and refuse an invalid one without writing anything. A valid result is
 written back as JSON: two-space indent, the sections in canonical order
-(`version`, `settings`, `regions`, `placements`, `bindings`), every other key
+(`version`, `settings`, `groups`, `regions`, `placements`, `actions`,
+`bindings`), every other key
 in its existing order. After editing the file by hand, run
 `trellis config validate`.
 

@@ -5,10 +5,11 @@
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 350,
-    "label": { "screens": "main", "corner": "bottom-right", "linger_ms": 1500 },
+    "label": { "screens": "main", "corner": "bottom-right", "linger_ms": 2000 },
     "cheat_sheet": "off",
     "dropdown": { "screens": "off" }
   },
+  "groups": ["Halves", "Thirds", "Displays"],
   "regions": {
     "gutter": {
       "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
@@ -20,18 +21,21 @@
     }
   },
   "placements": {
-    "left-half": { "rect": { "x": 0, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter" },
-    "right-half": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter" },
-    "right-half-full": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": null },
-    "top-right-third": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 0.25 }, "region": "stack" }
+    "left-half": { "rect": { "x": 0, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter", "group": "Halves" },
+    "right-half": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter", "group": "Halves" },
+    "right-half-full": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": null, "group": "Halves" },
+    "top-right-third": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 0.25 }, "region": "stack", "group": "Thirds" }
+  },
+  "actions": {
+    "screen-east": { "group": "Displays" }
   },
   "bindings": [
-    { "keys": "ctrl+cmd+h", "chord": ["ctrl+cmd+h"], "target": { "placement": "left-half" }, "prefix": false },
-    { "keys": "h", "chord": ["h"], "target": { "placement": "left-half" }, "prefix": false },
-    { "keys": "l", "chord": ["l"], "target": { "placement": "right-half" }, "prefix": true },
-    { "keys": "l l", "chord": ["l", "l"], "target": { "placement": "right-half-full" }, "prefix": false },
-    { "keys": "right", "chord": ["right"], "target": { "action": "screen-east" }, "prefix": false },
-    { "keys": "t", "chord": ["t"], "target": { "placement": "top-right-third" }, "prefix": false }
+    { "keys": "ctrl+cmd+h", "chord": ["ctrl+cmd+h"], "target": { "placement": "left-half" }, "group": "Halves", "prefix": false },
+    { "keys": "h", "chord": ["h"], "target": { "placement": "left-half" }, "group": "Halves", "prefix": false },
+    { "keys": "l", "chord": ["l"], "target": { "placement": "right-half" }, "group": "Halves", "prefix": true },
+    { "keys": "l l", "chord": ["l", "l"], "target": { "placement": "right-half-full" }, "group": "Halves", "prefix": false },
+    { "keys": "right", "chord": ["right"], "target": { "action": "screen-east" }, "group": "Displays", "prefix": false },
+    { "keys": "t", "chord": ["t"], "target": { "placement": "top-right-third" }, "group": "Thirds", "prefix": false }
   ],
   "warnings": [
     "\"l\" is the start of \"l l\", so it waits before running"

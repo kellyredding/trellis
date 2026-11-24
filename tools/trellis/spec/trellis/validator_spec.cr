@@ -1,7 +1,18 @@
 require "../spec_helper"
 
+# Placements in group "G", unless one names its own.
 private def placements(body : String) : String
-  %({"placements": {#{body}}})
+  entries = JSON.parse("{#{body}}").as_h.transform_values do |value|
+    hash = value.as_h.dup
+    hash["group"] = JSON::Any.new("G") unless hash.has_key?("group")
+    JSON::Any.new(hash)
+  end
+  %({"groups": ["G"], "placements": #{entries.to_json}})
+end
+
+# Both built-in actions in group "G", beside the given sections.
+private def acting(body : String) : String
+  %({"groups": ["G"], "actions": {"screen-east": {"group": "G"}, "screen-west": {"group": "G"}}, #{body}})
 end
 
 describe Trellis::Config::Validator do
@@ -13,8 +24,10 @@ describe Trellis::Config::Validator do
     model.settings.should eq(Trellis::Config::Settings.new)
     model.settings.leader.should eq("ctrl+s")
     model.settings.chord_wait_ms.should eq(400)
-    model.settings.label_linger_ms.should eq(1500)
+    model.settings.label_linger_ms.should eq(2000)
     model.bindings.should be_empty
+    model.groups.should be_empty
+    model.actions.should be_empty
   end
 
   it "needs the config to be an object" do
@@ -134,29 +147,119 @@ describe Trellis::Config::Validator do
     end
   end
 
+  describe "groups" do
+    it "keeps the listed order and allows any characters" do
+      model = SpecHelper.validate(%({"groups": ["Halves", "60/40", "Full screen"]})).model!
+      model.groups.should eq(["Halves", "60/40", "Full screen"])
+    end
+
+    it "must be a list of non-empty, trimmed, unique strings" do
+      SpecHelper.errors(%({"groups": {"a": 1}})).should eq([%(groups: must be a list of group names, such as ["Halves", "Displays"], got {"a":1})])
+      SpecHelper.errors(%({"groups": ["A", 3]})).should eq(["groups[1]: must be a group name (a string), got 3"])
+      SpecHelper.errors(%({"groups": ["A", "  "]})).should eq(["groups[1]: a group name cannot be empty; remove it or give it a name"])
+      SpecHelper.errors(%({"groups": [" A"]})).should eq([%(groups[0]: " A" has spaces at its start or end; write it as "A")])
+    end
+
+    it "rejects a name listed twice" do
+      SpecHelper.errors(%({"groups": ["A", "B", "A"]})).should eq([%(groups: "A" is listed more than once; remove the repeat)])
+    end
+
+    it "warns about a group nothing uses, with the fix" do
+      result = SpecHelper.validate(placements(%("a": {"rect": [0, 0, 1, 1]})).sub(%(["G"]), %(["G", "Full screen"])))
+      result.errors.should be_empty
+      result.warnings.should eq([
+        %(group "Full screen" is not used by any placement or action; ) +
+        %(use it with `trellis placements set NAME --group "Full screen"`, ) +
+        %(or remove it with `trellis groups remove "Full screen"`),
+      ])
+    end
+
+    it "counts a group used only by an action as used" do
+      SpecHelper.validate(%({"groups": ["D"], "actions": {"screen-east": {"group": "D"}}})).warnings.should be_empty
+    end
+  end
+
+  describe "placement groups" do
+    it "needs a group, saying how to set one" do
+      SpecHelper.errors(%({"groups": ["G"], "placements": {"left-40": {"rect": [0, 0, 0.4, 1]}}}))
+        .should eq(["placements.left-40: no group; set one with `trellis placements set left-40 --group NAME`"])
+      SpecHelper.errors(%({"groups": ["G"], "placements": {"a": {"rect": [0, 0, 1, 1], "group": null}}}))
+        .should eq(["placements.a: no group; set one with `trellis placements set a --group NAME`"])
+    end
+
+    it "needs the group to be listed in groups" do
+      SpecHelper.errors(placements(%("a": {"rect": [0, 0, 1, 1], "group": "60/40"})))
+        .should eq([%(placements.a.group: no group named "60/40"; add it with `trellis groups add 60/40`, or use one of "G")])
+      SpecHelper.errors(%({"placements": {"a": {"rect": [0, 0, 1, 1], "group": "Full screen"}}}))
+        .should eq([%(placements.a.group: no group named "Full screen"; add it with `trellis groups add "Full screen"`)])
+      SpecHelper.errors(placements(%("a": {"rect": [0, 0, 1, 1], "group": 1})))
+        .should eq(["placements.a.group: must be a group name, got 1"])
+    end
+
+    it "carries the group into the model" do
+      SpecHelper.validate(placements(%("a": {"rect": [0, 0, 1, 1]}))).model!.placements.first.group.should eq("G")
+    end
+  end
+
+  describe "actions" do
+    it "gives built-in actions a group" do
+      model = SpecHelper.validate(acting(%("bindings": {"right": "screen-east"}))).model!
+      model.actions.should eq({"screen-east" => "G", "screen-west" => "G"})
+      model.bindings.first.group.should eq("G")
+    end
+
+    it "accepts only built-in action names and the group key" do
+      SpecHelper.errors(%({"groups": ["G"], "actions": {"screen-north": {"group": "G"}}}))
+        .should eq(["actions.screen-north: not a built-in action; the built-in actions are screen-east, screen-west"])
+      SpecHelper.errors(%({"groups": ["G"], "actions": {"screen-east": {"group": "G", "colour": "red"}}}))
+        .should eq([%(actions.screen-east: unknown key "colour")])
+      SpecHelper.errors(%({"groups": ["G"], "actions": {"screen-east": "G"}}))
+        .should eq([%(actions.screen-east: must be an object, got "G")])
+    end
+
+    it "needs a listed group, saying how to set one" do
+      SpecHelper.errors(%({"groups": ["G"], "actions": {"screen-east": {}}}))
+        .should eq(["actions.screen-east: no group; set one with `trellis actions set screen-east --group NAME`"])
+      SpecHelper.errors(%({"groups": ["G"], "actions": {"screen-east": {"group": "Displays"}}}))
+        .should eq([%(actions.screen-east.group: no group named "Displays"; add it with `trellis groups add Displays`, or use one of "G")])
+    end
+
+    it "refuses a binding to an action without a group" do
+      SpecHelper.errors(%({"bindings": {"right": "screen-east"}}))
+        .should eq(["bindings \"right\": screen-east has no group; set one with `trellis actions set screen-east --group NAME`"])
+    end
+  end
+
   describe "bindings" do
     it "needs each key to parse as a chord" do
-      SpecHelper.errors(%({"bindings": {"hyper+h": "screen-east"}})).first.should contain("not a modifier")
+      SpecHelper.errors(acting(%("bindings": {"hyper+h": "screen-east"}))).first.should contain("not a modifier")
     end
 
     it "needs each value to name a placement or a built-in action" do
       SpecHelper.errors(%({"bindings": {"h": "nowhere"}})).should eq(["bindings \"h\": no placement or action named \"nowhere\""])
-      SpecHelper.errors(%({"bindings": {"h": "screen-west"}})).should be_empty
+      SpecHelper.errors(acting(%("bindings": {"h": "screen-west"}))).should be_empty
+    end
+
+    it "takes the group of its target" do
+      model = SpecHelper.validate(%({"groups": ["A", "B"], "placements": {"p": {"rect": [0, 0, 1, 1], "group": "B"}},
+        "actions": {"screen-west": {"group": "A"}}, "bindings": {"h": "p", "left": "screen-west"}})).model!
+      model.bindings.map { |binding| {binding.keys, binding.group} }.should eq([{"h", "B"}, {"left", "A"}])
+      model.bindings_by_group.map { |group, bindings| {group, bindings.map(&.keys)} }.should eq([{"A", ["left"]}, {"B", ["h"]}])
     end
 
     it "rejects escape and the leader" do
-      SpecHelper.errors(%({"bindings": {"escape": "screen-east"}})).first.should contain("escape")
-      SpecHelper.errors(%({"bindings": {"ctrl+s h": "screen-east"}})).first.should contain("leader")
-      SpecHelper.errors(%({"settings": {"leader": "ctrl+b"}, "bindings": {"ctrl+s h": "screen-east"}})).should be_empty
+      SpecHelper.errors(acting(%("bindings": {"escape": "screen-east"}))).first.should contain("escape")
+      SpecHelper.errors(acting(%("bindings": {"ctrl+s h": "screen-east"}))).first.should contain("leader")
+      SpecHelper.errors(acting(%("settings": {"leader": "ctrl+b"}, "bindings": {"ctrl+s h": "screen-east"}))).should be_empty
     end
 
     it "rejects two spellings of one chord" do
-      SpecHelper.errors(%({"bindings": {"ctrl+h": "screen-east", "control+h": "screen-west"}}))
+      SpecHelper.errors(acting(%("bindings": {"ctrl+h": "screen-east", "control+h": "screen-west"})))
         .should eq(["bindings \"control+h\": the same chord as \"ctrl+h\""])
     end
 
     it "canonicalizes and sorts by canonical chord" do
-      model = SpecHelper.validate(%({"bindings": {"t": "screen-east", "CMD+Ctrl+H": "screen-west", "l l": "screen-east", "l": "screen-west"}})).model!
+      model = SpecHelper.validate(acting(%("bindings": {"t": "screen-east", "CMD+Ctrl+H": "screen-west", "l l": "screen-east", "l": "screen-west"}))).model!
       model.bindings.map(&.keys).should eq(["ctrl+cmd+h", "l", "l l", "t"])
       model.bindings.find! { |binding| binding.keys == "ctrl+cmd+h" }.chord.should eq(["ctrl+cmd+h"])
     end
@@ -164,8 +267,7 @@ describe Trellis::Config::Validator do
 
   describe "prefix warnings" do
     it "warns once per pair, worded exactly, sorted by prefix then longer chord" do
-      result = SpecHelper.validate(<<-JSON)
-        {
+      result = SpecHelper.validate(acting(<<-JSON))
           "bindings": {
             "l l": "screen-east",
             "a b c": "screen-east",
@@ -174,7 +276,6 @@ describe Trellis::Config::Validator do
             "a b": "screen-west",
             "l l x": "screen-east"
           }
-        }
         JSON
       result.errors.should be_empty
       result.warnings.should eq([
@@ -189,7 +290,7 @@ describe Trellis::Config::Validator do
     end
 
     it "does not count a chord whose first token merely shares a key" do
-      SpecHelper.validate(%({"bindings": {"l": "screen-east", "ctrl+l x": "screen-west"}})).warnings.should be_empty
+      SpecHelper.validate(acting(%("bindings": {"l": "screen-east", "ctrl+l x": "screen-west"}))).warnings.should be_empty
     end
   end
 

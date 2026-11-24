@@ -22,7 +22,9 @@ module Trellis
 
       Config (no app needed):
         config path|show|validate|export --json|init [--starter] [--force]
+        groups list|add|rename|remove|move
         placements list|show|add|set|rename|remove
+        actions list|set                The built-in actions and their groups
         regions list|show|add|set|remove
         bindings list|show CHORD
         bind CHORD TARGET               Bind a chord to a placement or action
@@ -68,8 +70,12 @@ module Trellis
           Commands::Live.run(command, rest)
         when "config"
           Commands::ConfigFile.run(rest)
+        when "groups"
+          Commands::Groups.run(rest)
         when "placements"
           Commands::Placements.run(rest)
+        when "actions"
+          Commands::Actions.run(rest)
         when "regions"
           Commands::Regions.run(rest)
         when "bindings", "bind", "unbind"

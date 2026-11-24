@@ -6,6 +6,7 @@
       "screens": "main"
     }
   },
+  "groups": ["Halves", "Thirds", "Displays"],
   "regions": {
     "gutter": {
       "margins": {
@@ -26,11 +27,13 @@
   "placements": {
     "left-half": {
       "rect": [0, 0, 0.5, 1],
-      "region": "gutter"
+      "region": "gutter",
+      "group": "Halves"
     },
     "right-half": {
       "rect": [0.5, 0, 0.5, 1],
-      "region": "gutter"
+      "region": "gutter",
+      "group": "Halves"
     },
     "right-half-full": {
       "rect": {
@@ -38,11 +41,18 @@
         "y": 0,
         "w": 0.5,
         "h": 1
-      }
+      },
+      "group": "Halves"
     },
     "top-right-third": {
       "rect": [0.5, 0, 0.5, 0.25],
-      "region": "stack"
+      "region": "stack",
+      "group": "Thirds"
+    }
+  },
+  "actions": {
+    "screen-east": {
+      "group": "Displays"
     }
   },
   "bindings": {

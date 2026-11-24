@@ -17,6 +17,7 @@ module Trellis
           json.field "source", model.source.label
           json.field "path", model.path.to_s
           json.field("settings") { settings(json, model.settings) }
+          json.field "groups", model.groups
           json.field("regions") do
             json.object do
               model.regions.each { |region| json.field(region.name) { self.region(json, region) } }
@@ -25,6 +26,13 @@ module Trellis
           json.field("placements") do
             json.object do
               model.placements.each { |placement| json.field(placement.name) { self.placement(json, placement) } }
+            end
+          end
+          json.field("actions") do
+            json.object do
+              model.actions.each do |name, group|
+                json.field(name) { json.object { json.field "group", group } }
+              end
             end
           end
           json.field("bindings") do
@@ -75,6 +83,7 @@ module Trellis
         json.object do
           json.field("rect") { rect(json, placement.rect) }
           json.field "region", placement.region
+          json.field "group", placement.group
         end
       end
 
@@ -92,6 +101,7 @@ module Trellis
           json.field "keys", binding.keys
           json.field "chord", binding.chord
           json.field("target") { target(json, binding) }
+          json.field "group", binding.group
           json.field "prefix", binding.prefix
         end
       end

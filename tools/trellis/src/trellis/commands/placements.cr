@@ -9,20 +9,22 @@ module Trellis
         Actions:
           list
           show NAME
-          add NAME --rect X,Y,W,H [--region R]
-          set NAME [--rect X,Y,W,H] [--region R | --no-region]
+          add NAME --rect X,Y,W,H [--region R] --group G
+          set NAME [--rect X,Y,W,H] [--region R | --no-region] [--group G]
           rename OLD NEW           Also rewrites the bindings that target OLD
           remove NAME              Refused while a binding targets it
 
         A rect is x, y, width and height as fractions of the screen's visible
         frame (below the menu bar, beside the Dock), or of a region's area.
-        Names use lowercase letters, digits and hyphens.
+        Names use lowercase letters, digits and hyphens. Every placement
+        belongs to a group from `trellis groups list`, which is where its
+        bindings show in the app's Bindings tab.
 
         Changes rewrite the config file (see `trellis config --help`).
         TEXT
 
       def run(argv : Array(String)) : Int32
-        args = Args.parse(argv, values: ["--rect", "--region"], switches: ["--no-region"])
+        args = Args.parse(argv, values: ["--rect", "--region", "--group"], switches: ["--no-region"])
         Support.help(args, HELP).try { |code| return code }
         action = args.positional(0, "an action: list, show, add, set, rename or remove")
 
@@ -52,9 +54,9 @@ module Trellis
         else
           rows = model.placements.map do |placement|
             [placement.name, "[#{placement.rect.to_s.gsub(",", ", ")}]", placement.region || "-",
-             Support.bound_to(model, placement.name).join(", ")]
+             placement.group, Support.bound_to(model, placement.name).join(", ")]
           end
-          STDOUT.puts Format.table([["NAME", "RECT", "REGION", "BINDINGS"]] + rows)
+          STDOUT.puts Format.table([["NAME", "RECT", "REGION", "GROUP", "BINDINGS"]] + rows)
         end
         ExitCode::OK
       end
@@ -70,6 +72,7 @@ module Trellis
           STDOUT.puts placement.name
           STDOUT.puts "  rect      [#{placement.rect.to_s.gsub(",", ", ")}]  (x, y, w, h)"
           STDOUT.puts "  region    #{placement.region || "none"}"
+          STDOUT.puts "  group     #{placement.group}"
           bound = Support.bound_to(model, placement.name)
           STDOUT.puts "  bindings  #{bound.empty? ? "none" : bound.join(", ")}"
         end
@@ -82,12 +85,15 @@ module Trellis
         rect_text = args["--rect"] || raise UsageError.new("add needs --rect X,Y,W,H")
         raise UsageError.new("--no-region goes with set") if args.switch?("--no-region")
         rect = Support.parse_rect(rect_text)
+        group = Support.group_flag(args) ||
+                raise UsageError.new("add needs --group NAME, one of the groups in `trellis groups list`")
 
         outcome = Config::Mutation.apply do |mutation|
           placements = mutation.section("placements")
           raise Error.new("a placement named #{name.inspect} already exists") if placements.has_key?(name)
           body = {"rect" => Support.rect_tree(rect)}
           args["--region"].try { |region| body["region"] = JSON::Any.new(region) }
+          body["group"] = JSON::Any.new(group)
           placements[name] = JSON::Any.new(body)
         end
         report(args, outcome, "added placement #{name}", name)
@@ -99,9 +105,10 @@ module Trellis
         region = args["--region"]
         clear_region = args.switch?("--no-region")
         rect_text = args["--rect"]
+        group = Support.group_flag(args)
         raise UsageError.new("give --region or --no-region, not both") if region && clear_region
-        unless rect_text || region || clear_region
-          raise UsageError.new("set needs --rect, --region or --no-region")
+        unless rect_text || region || clear_region || group
+          raise UsageError.new("set needs --rect, --region, --no-region or --group")
         end
         rect = rect_text.try { |text| Support.parse_rect(text) }
 
@@ -112,6 +119,7 @@ module Trellis
           body["rect"] = Support.rect_tree(rect) if rect
           body["region"] = JSON::Any.new(region) if region
           body.delete("region") if clear_region
+          body["group"] = JSON::Any.new(group) if group
           placements[name] = JSON::Any.new(body)
         end
         report(args, outcome, "updated placement #{name}", name)
@@ -172,6 +180,7 @@ module Trellis
           json.field "name", placement.name
           json.field("rect") { Config::Export.rect(json, placement.rect) }
           json.field "region", placement.region
+          json.field "group", placement.group
           json.field "bindings", Support.bound_to(model, placement.name)
         end
       end

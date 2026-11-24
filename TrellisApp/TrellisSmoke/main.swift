@@ -120,7 +120,7 @@ if let config = fixture {
     check("label screens", config.settings.label.screens == .main)
     check("label corner", config.settings.label.corner == .bottomRight)
     check("label linger_ms takes the default", config.settings.label.lingerMs == Settings.defaultLingerMs)
-    check("the linger default is 1500 ms", Settings.defaultLingerMs == 1500)
+    check("the linger default is 2000 ms", Settings.defaultLingerMs == 2000)
     check("cheat_sheet", config.settings.cheatSheet == .off)
     check("dropdown screens", config.settings.dropdown.screens == .off)
     check("two regions", config.regions.count == 2)
@@ -141,6 +141,14 @@ if let config = fixture {
     check("warnings decode", config.warnings == ["\"l\" is the start of \"l l\", so it waits before running"])
     check("a placement's region resolves", config.region(for: config.placements["left-half"]!) == config.regions["gutter"])
     check("no region resolves to none", config.region(for: config.placements["right-half-full"]!) == Region.none)
+    check("groups decode in order", config.groups == ["Halves", "Thirds", "Displays"])
+    check("a placement's group decodes", config.placements["top-right-third"]?.group == "Thirds")
+    check("only configured actions decode", config.actions == ["screen-east": ActionGroup(group: "Displays")])
+    check("a binding carries its target's group",
+          config.bindings[4].group == "Displays" && config.bindings[5].group == "Thirds")
+    check("sections follow groups order", config.bindingSections.map(\.group) == ["Halves", "Thirds", "Displays"])
+    check("a section keeps export order",
+          config.bindingSections.first?.bindings.map(\.keys) == ["ctrl+cmd+h", "h", "l", "l l"])
 }
 
 func decodes(_ json: String) -> Bool { (try? TrellisConfig.decode(Data(json.utf8))) != nil }
@@ -148,22 +156,31 @@ func decodes(_ json: String) -> Bool { (try? TrellisConfig.decode(Data(json.utf8
 let minimal = """
 {"version":1,"source":"starter","path":"x","settings":{"leader":"ctrl+s","chord_wait_ms":400,
 "label":{"screens":"all","corner":"top-left","linger_ms":0},"cheat_sheet":"label","dropdown":{"screens":"all"}},
-"regions":{},"placements":{},"bindings":[BINDING],"warnings":[]}
+"groups":["G","Empty"],"regions":{},"placements":{},"actions":{},"bindings":[BINDING],"warnings":[]}
 """
 check("a minimal export decodes",
       decodes(minimal.replacingOccurrences(of: "BINDING", with: "")))
 check("a target with both placement and action is rejected", !decodes(minimal.replacingOccurrences(
     of: "BINDING",
-    with: #"{"keys":"h","chord":["h"],"target":{"placement":"a","action":"screen-east"},"prefix":false}"#
+    with: #"{"keys":"h","chord":["h"],"target":{"placement":"a","action":"screen-east"},"group":"G","prefix":false}"#
 )))
 check("an unparseable chord token is rejected", !decodes(minimal.replacingOccurrences(
     of: "BINDING",
-    with: #"{"keys":"hyper+h","chord":["hyper+h"],"target":{"placement":"a"},"prefix":false}"#
+    with: #"{"keys":"hyper+h","chord":["hyper+h"],"target":{"placement":"a"},"group":"G","prefix":false}"#
 )))
 check("an unknown action is rejected", !decodes(minimal.replacingOccurrences(
     of: "BINDING",
-    with: #"{"keys":"h","chord":["h"],"target":{"action":"screen-north"},"prefix":false}"#
+    with: #"{"keys":"h","chord":["h"],"target":{"action":"screen-north"},"group":"G","prefix":false}"#
 )))
+check("a binding without a group is rejected", !decodes(minimal.replacingOccurrences(
+    of: "BINDING",
+    with: #"{"keys":"h","chord":["h"],"target":{"placement":"a"},"prefix":false}"#
+)))
+let grouped = try? TrellisConfig.decode(Data(minimal.replacingOccurrences(
+    of: "BINDING",
+    with: #"{"keys":"h","chord":["h"],"target":{"placement":"a"},"group":"G","prefix":false}"#
+).utf8))
+check("a group with no bindings has no section", grouped?.bindingSections.map(\.group) == ["G"])
 
 // MARK: - Geometry
 

@@ -75,6 +75,21 @@ module Trellis
       def bound_to(model : Config::Model, placement : String) : Array(String)
         model.bindings.select { |binding| binding.placement == placement }.map(&.keys)
       end
+
+      def action_bound_to(model : Config::Model, action : String) : Array(String)
+        model.bindings.select { |binding| binding.action == action }.map(&.keys)
+      end
+
+      # A group name as typed, trimmed; an empty one is a usage error.
+      def group_name(text : String, flag : String = "a group name") : String
+        name = text.strip
+        raise UsageError.new("#{flag} cannot be empty") if name.empty?
+        name
+      end
+
+      def group_flag(args : Args) : String?
+        args["--group"].try { |text| group_name(text, "--group") }
+      end
     end
   end
 end

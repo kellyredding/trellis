@@ -241,28 +241,22 @@ struct BindingsSettings: View {
         if let config = model.configStore.config {
             SettingsCard(title: "Bindings (\(config.bindings.count))") {
                 ScrollView {
-                    Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
-                        ForEach(Array(config.bindings.enumerated()), id: \.offset) { _, binding in
-                            GridRow {
-                                Text(KeyToken.chordDisplay(binding.tokens))
-                                    .font(.system(size: 14, weight: .medium, design: .monospaced))
-                                    .help(binding.keys)
-                                PlacementThumbnail(target: binding.target, config: config)
-                                Text(binding.target.description)
-                                if binding.prefix {
-                                    Label("waits", systemImage: "hourglass")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                        .help("A longer chord starts with this one, so it waits before running.")
-                                } else {
-                                    Text("")
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(config.bindingSections, id: \.group) { section in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(section.group)
+                                    .font(.system(size: 12, weight: .semibold))
+                                FlowLayout(spacing: 8) {
+                                    ForEach(section.bindings, id: \.keys) { binding in
+                                        BindingTile(binding: binding, config: config)
+                                    }
                                 }
                             }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(height: 300)
+                .frame(height: 420)
             }
             if !config.warnings.isEmpty {
                 SettingsCard(title: "Warnings") {
@@ -273,6 +267,80 @@ struct BindingsSettings: View {
         } else {
             SettingsCaption(model.configStore.error ?? "No config is loaded yet.")
         }
+    }
+}
+
+/// One binding: its chord, what it does to a window, and its target's name.
+struct BindingTile: View {
+    let binding: ChordBinding
+    let config: TrellisConfig
+
+    static let width: CGFloat = 136
+
+    var body: some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Text(KeyToken.chordDisplay(binding.tokens))
+                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .lineLimit(1)
+                    .help(binding.keys)
+                if binding.prefix {
+                    Image(systemName: "hourglass")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .help("A longer chord starts with this one, so it waits before running.")
+                }
+            }
+            PlacementThumbnail(target: binding.target, config: config)
+            Text(binding.target.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .truncationMode(.middle)
+                .help(binding.target.description)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 6)
+        .frame(width: Self.width)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+    }
+}
+
+/// Lays its views out left to right, starting a new row only when the next
+/// one would not fit.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let frames = arrange(subviews, width: proposal.width ?? .infinity)
+        return CGSize(width: frames.map(\.maxX).max() ?? 0, height: frames.map(\.maxY).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (subview, frame) in zip(subviews, arrange(subviews, width: bounds.width)) {
+            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                          proposal: ProposedViewSize(frame.size))
+        }
+    }
+
+    private func arrange(_ subviews: Subviews, width: CGFloat) -> [CGRect] {
+        var frames: [CGRect] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > width {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            frames.append(CGRect(origin: CGPoint(x: x, y: y), size: size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return frames
     }
 }
 

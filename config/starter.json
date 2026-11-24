@@ -1,44 +1,66 @@
 {
   "version": 1,
+  "groups": ["Halves", "Corners", "60/40", "Full screen", "Displays"],
   "placements": {
     "left-half": {
-      "rect": [0, 0, 0.5, 1]
+      "rect": [0, 0, 0.5, 1],
+      "group": "Halves"
     },
     "right-half": {
-      "rect": [0.5, 0, 0.5, 1]
+      "rect": [0.5, 0, 0.5, 1],
+      "group": "Halves"
     },
     "top-half": {
-      "rect": [0, 0, 1, 0.5]
+      "rect": [0, 0, 1, 0.5],
+      "group": "Halves"
     },
     "bottom-half": {
-      "rect": [0, 0.5, 1, 0.5]
+      "rect": [0, 0.5, 1, 0.5],
+      "group": "Halves"
     },
     "top-left-quarter": {
-      "rect": [0, 0, 0.5, 0.5]
+      "rect": [0, 0, 0.5, 0.5],
+      "group": "Corners"
     },
     "top-right-quarter": {
-      "rect": [0.5, 0, 0.5, 0.5]
+      "rect": [0.5, 0, 0.5, 0.5],
+      "group": "Corners"
     },
     "bottom-left-quarter": {
-      "rect": [0, 0.5, 0.5, 0.5]
+      "rect": [0, 0.5, 0.5, 0.5],
+      "group": "Corners"
     },
     "bottom-right-quarter": {
-      "rect": [0.5, 0.5, 0.5, 0.5]
+      "rect": [0.5, 0.5, 0.5, 0.5],
+      "group": "Corners"
     },
     "left-60": {
-      "rect": [0, 0, 0.6, 1]
+      "rect": [0, 0, 0.6, 1],
+      "group": "60/40"
     },
     "right-40": {
-      "rect": [0.6, 0, 0.4, 1]
+      "rect": [0.6, 0, 0.4, 1],
+      "group": "60/40"
     },
     "left-40": {
-      "rect": [0, 0, 0.4, 1]
+      "rect": [0, 0, 0.4, 1],
+      "group": "60/40"
     },
     "right-60": {
-      "rect": [0.4, 0, 0.6, 1]
+      "rect": [0.4, 0, 0.6, 1],
+      "group": "60/40"
     },
     "maximize": {
-      "rect": [0, 0, 1, 1]
+      "rect": [0, 0, 1, 1],
+      "group": "Full screen"
+    }
+  },
+  "actions": {
+    "screen-east": {
+      "group": "Displays"
+    },
+    "screen-west": {
+      "group": "Displays"
     }
   },
   "bindings": {

@@ -22,8 +22,8 @@ module Trellis
         $TRELLIS_ROOT/config.json (default ~/.trellis/config.json), and may be
         a symlink: writes replace the file it points to, never the link.
 
-        Commands that change the config (bind, unbind, placements, regions,
-        settings set) validate the whole result and refuse an invalid one. They
+        Commands that change the config (bind, unbind, groups, placements,
+        actions, regions, settings set) validate the whole result and refuse an invalid one. They
         rewrite the file with its sections in canonical order and every other
         key where it was. After editing the file by hand, run
         `trellis config validate`.
@@ -32,9 +32,11 @@ module Trellis
       MINIMAL = <<-JSON
         {
           "version": 1,
+          "groups": ["Full screen"],
           "placements": {
             "maximize": {
-              "rect": [0, 0, 1, 1]
+              "rect": [0, 0, 1, 1],
+              "group": "Full screen"
             }
           },
           "bindings": {

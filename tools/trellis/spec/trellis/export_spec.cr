@@ -27,11 +27,30 @@ describe Trellis::Config::Export do
   end
 
   it "writes whole fractions as integers and the rest as decimals" do
-    model = SpecHelper.validate(%({"placements": {"a": {"rect": [0, 0.25, 1.0, 0.75]}}})).model!
+    model = SpecHelper.validate(%({"groups": ["G"], "placements": {"a": {"rect": [0, 0.25, 1.0, 0.75], "group": "G"}}})).model!
     json = Trellis::Config::Export.to_json(model)
     json.should contain(%("x": 0,))
     json.should contain(%("y": 0.25,))
     json.should contain(%("w": 1,))
+  end
+
+  it "exports groups in order, each placement's and binding's group, and only the configured actions" do
+    model = SpecHelper.validate(<<-JSON).model!
+      {
+        "groups": ["Zed", "60/40", "Alpha"],
+        "placements": {"a": {"rect": [0, 0, 1, 1], "group": "60/40"}},
+        "actions": {"screen-west": {"group": "Zed"}},
+        "bindings": {"x": "a", "left": "screen-west"}
+      }
+      JSON
+    exported = JSON.parse(Trellis::Config::Export.to_json(model))
+    exported["groups"].should eq(JSON.parse(%(["Zed", "60/40", "Alpha"])))
+    exported["placements"]["a"]["group"].should eq("60/40")
+    exported["actions"].should eq(JSON.parse(%({"screen-west": {"group": "Zed"}})))
+    exported["bindings"].as_a.map { |binding| {binding["keys"].as_s, binding["group"].as_s} }
+      .should eq([{"left", "Zed"}, {"x", "60/40"}])
+    exported["warnings"].as_a.size.should eq(1)
+    exported["warnings"][0].as_s.should start_with(%(group "Alpha" is not used))
   end
 end
 
@@ -50,12 +69,23 @@ describe "the starter config" do
       exported["bindings"].as_a.size.should eq(15)
       exported["regions"].as_h.should be_empty
       exported["placements"]["maximize"]["rect"].should eq(JSON.parse(%({"x": 0, "y": 0, "w": 1, "h": 1})))
+      exported["groups"].should eq(JSON.parse(%(["Halves", "Corners", "60/40", "Full screen", "Displays"])))
+      exported["actions"].should eq(JSON.parse(%({"screen-east": {"group": "Displays"}, "screen-west": {"group": "Displays"}})))
+
+      groups = result.model!.placements.group_by(&.group).transform_values(&.map(&.name))
+      groups.should eq({
+        "Halves"      => ["left-half", "right-half", "top-half", "bottom-half"],
+        "Corners"     => ["top-left-quarter", "top-right-quarter", "bottom-left-quarter", "bottom-right-quarter"],
+        "60/40"       => ["left-60", "right-40", "left-40", "right-60"],
+        "Full screen" => ["maximize"],
+      })
     end
   end
 end
 
 describe "resolving a chord" do
-  model = SpecHelper.validate(%({"bindings": {"h": "screen-west", "l": "screen-east", "l l": "screen-west", "x y": "screen-east"}})).model!
+  model = SpecHelper.validate(%({"groups": ["G"], "actions": {"screen-east": {"group": "G"}, "screen-west": {"group": "G"}},
+    "bindings": {"h": "screen-west", "l": "screen-east", "l l": "screen-west", "x y": "screen-east"}})).model!
 
   it "finds the binding and what it starts" do
     model.binding?(["l"]).not_nil!.action.should eq("screen-east")

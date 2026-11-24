@@ -13,10 +13,13 @@ module Trellis
         leader (⌃S): "h", "l l", "ctrl+h". Modifiers are ctrl, alt, shift and
         cmd (control, opt, option and command also work), joined to the key by
         "+". TARGET is a placement name or a built-in action: screen-east,
-        screen-west.
+        screen-west. An action needs a group first (`trellis actions set`).
 
         A chord that also starts a longer one waits (chord_wait_ms) before it
         runs; `trellis resolve CHORD` says whether one does.
+
+        list shows the bindings under their target's group, in the order of
+        `trellis groups list`.
 
         bind and unbind rewrite the config file (see `trellis config --help`).
         TEXT
@@ -44,6 +47,7 @@ module Trellis
         if args.json?
           Support.print_json do |json|
             json.object do
+              json.field "groups", model.groups
               json.field("bindings") do
                 json.array { model.bindings.each { |binding| Config::Export.binding(json, binding) } }
               end
@@ -51,10 +55,18 @@ module Trellis
             end
           end
         else
-          rows = model.bindings.map do |binding|
-            [binding.keys, binding.target_name, binding.target_kind, binding.prefix ? "waits" : ""]
+          sections = model.bindings_by_group
+          STDOUT.puts "no bindings" if sections.empty?
+          rows = sections.flat_map do |_, bindings|
+            bindings.map do |binding|
+              [binding.keys, binding.target_name, binding.target_kind, binding.prefix ? "waits" : ""]
+            end
           end
-          STDOUT.puts Format.table([["CHORD", "TARGET", "KIND", ""]] + rows)
+          lines = Format.table(rows).split('\n')
+          sections.each do |group, bindings|
+            STDOUT.puts group
+            lines.shift(bindings.size).each { |line| STDOUT.puts "  #{line}" }
+          end
         end
         ExitCode::OK
       end
@@ -82,6 +94,13 @@ module Trellis
         replaced = nil
 
         outcome = Config::Mutation.apply do |mutation|
+          if Config::BUILT_IN_ACTIONS.includes?(target)
+            group = mutation.section?("actions").try(&.[target]?).try(&.as_h?).try(&.["group"]?).try(&.as_s?)
+            unless group
+              raise Error.new("refused: #{target} has no group; run " \
+                              "`trellis actions set #{target} --group NAME` first; nothing was written")
+            end
+          end
           bindings = mutation.section("bindings")
           if existing = matching_key(bindings, chord)
             replaced = bindings[existing].as_s? || bindings[existing].to_json

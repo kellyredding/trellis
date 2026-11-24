@@ -44,6 +44,19 @@ module Trellis
         @root[name]?.try(&.as_h?)
       end
 
+      # The `groups` list, created in canonical position if absent.
+      def groups : Array(JSON::Any)
+        existing = @root["groups"]?
+        if existing && !existing.raw.nil?
+          return existing.as_a? || raise InvalidConfig.new(
+            "the config is invalid", ["groups: must be a list of group names"])
+        end
+
+        list = [] of JSON::Any
+        insert_section("groups", JSON::Any.new(list))
+        list
+      end
+
       def commit : Outcome
         result = Validator.validate(JSON::Any.new(@root), @loaded.source, @loaded.path)
         unless result.valid?

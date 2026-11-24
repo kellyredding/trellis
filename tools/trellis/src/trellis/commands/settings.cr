@@ -18,7 +18,7 @@ module Trellis
           label.screens      Where the layout-mode label shows: all, main, target
           label.corner       top-left, top-right, bottom-left, bottom-right
           label.linger_ms    How long the label shows a typed chord's result,
-                             0 (off) to 3000 (default 1500)
+                             0 (off) to 3000 (default 2000)
           cheat_sheet        off, label, dropdown
           dropdown.screens   off, all, main
 

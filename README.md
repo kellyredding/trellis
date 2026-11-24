@@ -44,7 +44,7 @@ newer release.
 trellis windows                      # every window, with IDs
 trellis place left-half              # the focused window
 trellis place --rect 0.1,0.1,0.8,0.8 --app Safari   # try a shape unsaved
-trellis placements add centred --rect 0.1,0.1,0.8,0.8
+trellis placements add centred --rect 0.1,0.1,0.8,0.8 --group "Full screen"
 trellis bind c centred               # ⌃S c now centres the focused window
 trellis resolve "l l"                # what a chord does, and whether it waits
 ```
@@ -66,6 +66,13 @@ move the window to the next display. The starter binds `h` `l` `k` `j` to the
 halves, `i` `o` `,` `.` to the quarters, `ctrl+h` / `ctrl+l` to 60/40,
 `cmd+h` / `cmd+l` to 40/60, `return` to the whole screen, and the arrow keys
 to the next display.
+
+`groups` names the groups in display order, and every placement names its
+`group`; so does each built-in action you bind, under `actions`
+(`"actions": {"screen-east": {"group": "Displays"}}`). The app's Bindings tab
+shows one section per group, in that order. The starter's groups are Halves,
+Corners, 60/40, Full screen and Displays. `trellis groups` adds, renames,
+reorders and removes them; `trellis actions set` gives an action its group.
 
 The file is strict JSON. Edit it with the CLI, or by hand followed by
 `trellis config validate`; `docs/contract.md` has every key.

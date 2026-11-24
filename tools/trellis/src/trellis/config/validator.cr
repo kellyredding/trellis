@@ -38,11 +38,14 @@ module Trellis
 
         version = check_version(root["version"]?)
         settings = check_settings(root["settings"]?)
+        groups = check_groups(root["groups"]?)
         region_tree = object(root["regions"]?, "regions") || {} of String => JSON::Any
         regions = check_regions(region_tree)
         placement_tree = object(root["placements"]?, "placements") || {} of String => JSON::Any
-        placements = check_placements(placement_tree, region_tree.keys)
-        bindings = check_bindings(root["bindings"]?, settings.leader, placement_tree.keys)
+        placements = check_placements(placement_tree, region_tree.keys, groups)
+        actions = check_actions(root["actions"]?, groups)
+        placement_groups = placements.to_h { |placement| {placement.name, placement.group} }
+        bindings = check_bindings(root["bindings"]?, settings.leader, placement_tree.keys, placement_groups, actions)
 
         prefixed = Set(Array(String)).new
         warnings = [] of String
@@ -55,6 +58,13 @@ module Trellis
         end
         bindings = bindings.map { |binding| binding.copy_with(prefix: prefixed.includes?(binding.chord)) }
 
+        groups.each do |group|
+          next if placement_groups.values.includes?(group) || actions.values.includes?(group)
+          warnings << "group #{group.inspect} is not used by any placement or action; " \
+                      "use it with `trellis placements set NAME --group #{Validator.shell_word(group)}`, " \
+                      "or remove it with `trellis groups remove #{Validator.shell_word(group)}`"
+        end
+
         unless @errors.empty?
           return Result.new(nil, @errors, warnings)
         end
@@ -64,8 +74,10 @@ module Trellis
           source: @source,
           path: @path,
           settings: settings,
+          groups: groups,
           regions: regions,
           placements: placements,
+          actions: actions,
           bindings: bindings,
           warnings: warnings,
         )
@@ -187,7 +199,79 @@ module Trellis
         end
       end
 
-      private def check_placements(tree : Hash(String, JSON::Any), region_names : Array(String)) : Array(Placement)
+      private def check_groups(value : JSON::Any?) : Array(String)
+        names = [] of String
+        return names if value.nil? || value.raw.nil?
+        list = value.as_a?
+        unless list
+          error(%(groups: must be a list of group names, such as ["Halves", "Displays"], got #{show(value)}))
+          return names
+        end
+        list.each_with_index do |item, index|
+          where = "groups[#{index}]"
+          name = item.as_s?
+          if name.nil?
+            error("#{where}: must be a group name (a string), got #{show(item)}")
+          elsif name.strip.empty?
+            error("#{where}: a group name cannot be empty; remove it or give it a name")
+          elsif name != name.strip
+            error("#{where}: #{name.inspect} has spaces at its start or end; write it as #{name.strip.inspect}")
+          elsif names.includes?(name)
+            error("groups: #{name.inspect} is listed more than once; remove the repeat")
+          else
+            names << name
+          end
+        end
+        names
+      end
+
+      # Built-in actions named in `actions`, each with its group.
+      private def check_actions(value : JSON::Any?, groups : Array(String)) : Hash(String, String)
+        actions = {} of String => String
+        tree = object(value, "actions")
+        return actions unless tree
+        tree.each do |name, entry|
+          where = "actions.#{name}"
+          unless BUILT_IN_ACTIONS.includes?(name)
+            error("#{where}: not a built-in action; the built-in actions are #{BUILT_IN_ACTIONS.join(", ")}")
+            next
+          end
+          body = object(entry, where)
+          next if body.nil? && !entry.raw.nil?
+          body ||= {} of String => JSON::Any
+          allowed_keys(where, body, ["group"])
+          actions[name] = group_ref(where, body["group"]?, groups, "trellis actions set #{name} --group NAME")
+        end
+        actions
+      end
+
+      # The group a placement or action names, reporting a missing or unknown one
+      # with the command that fixes it.
+      private def group_ref(where : String, value : JSON::Any?, groups : Array(String), fix : String) : String
+        if value.nil? || value.raw.nil?
+          error("#{where}: no group; set one with `#{fix}`")
+          return ""
+        end
+        name = value.as_s?
+        unless name
+          error("#{where}.group: must be a group name, got #{show(value)}")
+          return ""
+        end
+        unless groups.includes?(name)
+          choices = groups.empty? ? "" : ", or use one of #{groups.map(&.inspect).join(", ")}"
+          error("#{where}.group: no group named #{name.inspect}; add it with " \
+                "`trellis groups add #{Validator.shell_word(name)}`#{choices}")
+        end
+        name
+      end
+
+      # A name as it would be typed in a shell: bare when that is safe, else quoted.
+      def self.shell_word(name : String) : String
+        name.matches?(/\A[A-Za-z0-9_\/.,:+=@%-]+\z/) ? name : name.inspect
+      end
+
+      private def check_placements(tree : Hash(String, JSON::Any), region_names : Array(String),
+                                   groups : Array(String)) : Array(Placement)
         tree.compact_map do |name, value|
           where = "placements.#{name}"
           check_name(where, name)
@@ -196,7 +280,8 @@ module Trellis
           end
           body = object(value, where)
           next unless body
-          allowed_keys(where, body, ["rect", "region"])
+          allowed_keys(where, body, ["rect", "region", "group"])
+          group = group_ref(where, body["group"]?, groups, "trellis placements set #{name} --group NAME")
 
           rect_value = body["rect"]?
           unless rect_value
@@ -221,7 +306,7 @@ module Trellis
             end
           end
 
-          rect ? Placement.new(name, rect, region) : nil
+          rect ? Placement.new(name, rect, region, group) : nil
         end
       end
 
@@ -261,7 +346,8 @@ module Trellis
         end
       end
 
-      private def check_bindings(value : JSON::Any?, leader : String, placement_names : Array(String)) : Array(Binding)
+      private def check_bindings(value : JSON::Any?, leader : String, placement_names : Array(String),
+                                 placement_groups : Hash(String, String), actions : Hash(String, String)) : Array(Binding)
         tree = object(value, "bindings")
         return [] of Binding unless tree
 
@@ -286,6 +372,10 @@ module Trellis
             error("#{where}: no placement or action named #{name.inspect}")
             next
           end
+          if action && !actions.has_key?(name)
+            error("#{where}: #{name} has no group; set one with `trellis actions set #{name} --group NAME`")
+            next
+          end
           next unless chord
 
           if earlier = seen[chord]?
@@ -299,6 +389,7 @@ module Trellis
             placement: action ? nil : name,
             action: action ? name : nil,
             prefix: false,
+            group: (action ? actions[name]? : placement_groups[name]?) || "",
           )
         end
         bindings.sort_by!(&.keys)

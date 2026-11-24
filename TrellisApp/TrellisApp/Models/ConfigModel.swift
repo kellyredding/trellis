@@ -9,8 +9,12 @@ struct TrellisConfig: Decodable, Equatable {
     let source: String
     let path: String
     let settings: Settings
+    /// Display order of the Bindings tab's sections.
+    let groups: [String]
     let regions: [String: Region]
     let placements: [String: Placement]
+    /// Only the built-in actions the config gives a group, keyed by action name.
+    let actions: [String: ActionGroup]
     let bindings: [ChordBinding]
     let warnings: [String]
 
@@ -27,6 +31,24 @@ struct TrellisConfig: Decodable, Equatable {
         guard let name = placement.region else { return Region.none }
         return regions[name]
     }
+
+    /// Each group that has bindings, in `groups` order, with its bindings in
+    /// export order (sorted by canonical chord).
+    var bindingSections: [BindingSection] {
+        groups.compactMap { group in
+            let members = bindings.filter { $0.group == group }
+            return members.isEmpty ? nil : BindingSection(group: group, bindings: members)
+        }
+    }
+}
+
+struct BindingSection: Equatable {
+    let group: String
+    let bindings: [ChordBinding]
+}
+
+struct ActionGroup: Decodable, Equatable {
+    let group: String
 }
 
 enum LabelScreens: String, Codable, CaseIterable { case all, main, target }
@@ -75,7 +97,7 @@ struct Settings: Decodable, Equatable {
 
     static let defaultLeader = "ctrl+s"
     static let defaultChordWaitMs = 400
-    static let defaultLingerMs = 1500
+    static let defaultLingerMs = 2000
 
     var leaderToken: KeyToken? { KeyToken(leader) }
 }
@@ -83,6 +105,7 @@ struct Settings: Decodable, Equatable {
 struct Placement: Decodable, Equatable {
     let rect: Rect
     let region: String?
+    let group: String
 }
 
 enum BuiltInAction: String, Codable, CaseIterable {
@@ -139,16 +162,19 @@ struct ChordBinding: Decodable, Equatable {
     let keys: String
     let chord: [String]
     let target: BindingTarget
+    /// The target's group, resolved by the CLI.
+    let group: String
     let prefix: Bool
     let tokens: [KeyToken]
 
-    enum CodingKeys: String, CodingKey { case keys, chord, target, prefix }
+    enum CodingKeys: String, CodingKey { case keys, chord, target, group, prefix }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         keys = try container.decode(String.self, forKey: .keys)
         chord = try container.decode([String].self, forKey: .chord)
         target = try container.decode(BindingTarget.self, forKey: .target)
+        group = try container.decode(String.self, forKey: .group)
         prefix = try container.decode(Bool.self, forKey: .prefix)
         var parsed: [KeyToken] = []
         for text in chord {

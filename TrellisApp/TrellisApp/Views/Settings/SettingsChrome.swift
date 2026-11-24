@@ -78,7 +78,9 @@ struct SettingsCard<Content: View>: View {
 }
 
 enum SettingsMetrics {
-    static let windowWidth: CGFloat = 580
+    /// Wide enough for four binding tiles in a row, so the starter's groups
+    /// each fit on one line beside the scroller.
+    static let windowWidth: CGFloat = 660
     /// Every popup and slider takes this width, so they share both edges.
     static let controlWidth: CGFloat = 220
     static let readoutWidth: CGFloat = 64
