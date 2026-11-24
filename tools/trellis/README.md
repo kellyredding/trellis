@@ -83,7 +83,9 @@ points to is replaced (temp file beside it, then a rename), and the link
 stays a link.
 
 After a write the CLI asks the app to reload. If the app isn't running, it
-picks the change up at launch.
+picks the change up at launch. If it takes the request but doesn't answer,
+the CLI says so rather than calling it not running; the app also reloads
+when it sees the file change.
 
 ## Paths
 

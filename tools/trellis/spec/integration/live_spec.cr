@@ -270,6 +270,30 @@ describe "live commands" do
         end
       end
     end
+
+    it "say the app didn't confirm, not that it isn't running, when it takes the request without replying" do
+      SpecHelper.sandbox do |sandbox|
+        SpecHelper.with_app(sandbox, {} of String => String) do |app|
+          result = SpecHelper.run_live(sandbox, app, ["bind", "l l", "maximize"])
+          result.exit_code.should eq(0)
+          result.stdout.should contain("Trellis didn't confirm the reload (no reply at app.sock)")
+          result.stdout.should_not contain("isn't running")
+          app.request["event"].should eq("config.reload")
+        end
+        SpecHelper.with_app(sandbox, {} of String => String) do |app|
+          json = SpecHelper.run_live(sandbox, app, ["unbind", "l l", "--json"]).json
+          json["reload"].should eq(JSON.parse(%({"sent": true, "loaded": null, "error": "no reply at app.sock"})))
+        end
+      end
+    end
+
+    it "say the app isn't running when nothing is listening" do
+      SpecHelper.sandbox do |sandbox|
+        result = SpecHelper.run(sandbox, ["bind", "l l", "maximize"])
+        result.exit_code.should eq(0)
+        result.stdout.should contain("Trellis isn't running; it will pick up the change at launch")
+      end
+    end
   end
 end
 

@@ -21,6 +21,16 @@ module Trellis
       end
     end
 
+    # Connected, but no reply came back, so the request may have arrived.
+    # Still `not_running` to callers, as the contract says.
+    class NoReply < NotRunning
+      getter reason : String
+
+      def initialize(@reason : String)
+        super(@reason)
+      end
+    end
+
     # A reply with `"ok": false`, mapped to the contract's exit codes.
     class Refused < Error
       getter reply_code : String
@@ -64,6 +74,9 @@ module Trellis
       def summary : String
         if !sent
           "Trellis isn't running; it will pick up the change at launch"
+        elsif loaded.nil?
+          "Trellis didn't confirm the reload (#{error || "no reason given"}); it also reloads " \
+          "when the file changes, so `trellis status` shows whether it took"
         elsif loaded
           "Trellis reloaded the config"
         else
@@ -108,6 +121,8 @@ module Trellis
     def reload_quietly : ReloadOutcome
       data = request("config.reload")
       ReloadOutcome.new(true, data["loaded"]?.try(&.as_bool?) || false, data["error"]?.try(&.as_s?))
+    rescue silent : NoReply
+      ReloadOutcome.new(true, nil, silent.reason)
     rescue NotRunning
       ReloadOutcome.new(false, nil, nil)
     rescue error : Error
@@ -129,13 +144,13 @@ module Trellis
         socket << line << '\n'
         reply = socket.gets(chomp: true)
         if reply.nil? || reply.empty?
-          raise NotRunning.new("no reply at #{path}")
+          raise NoReply.new("no reply at #{path}")
         end
         reply
       rescue IO::TimeoutError
-        raise NotRunning.new("no reply within #{timeout.total_seconds.to_i}s at #{path}")
+        raise NoReply.new("no reply within #{timeout.total_seconds.to_i}s at #{path}")
       rescue error : IO::Error | Socket::Error
-        raise NotRunning.new("the connection failed: #{error.message}")
+        raise NoReply.new("the connection failed: #{error.message}")
       ensure
         socket.close rescue nil
       end
