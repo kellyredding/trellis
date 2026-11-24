@@ -84,7 +84,7 @@ struct Settings: Decodable, Equatable {
     }
 
     static let defaultLeader = "ctrl+s"
-    static let defaultChordWaitMs = 400
+    static let defaultChordWaitMs = 600
     static let defaultLingerMs = 2000
 
     var leaderToken: KeyToken? { KeyToken(leader) }

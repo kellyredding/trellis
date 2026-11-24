@@ -76,7 +76,7 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
   "version": 1,
   "settings": {
     "leader": "ctrl+s",
-    "chord_wait_ms": 400,
+    "chord_wait_ms": 600,
     "label": {
       "screens": "all",
       "corner": "bottom-right",
@@ -123,7 +123,7 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
 | Setting | Default | Values |
 |---|---|---|
 | `leader` | `ctrl+s` | one key token with at least one modifier |
-| `chord_wait_ms` | `400` | a whole number, `50`–`2000` |
+| `chord_wait_ms` | `600` | a whole number, `50`–`2000` |
 | `label.screens` | `all` | `all`, `main`, `target` |
 | `label.corner` | `bottom-right` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
 | `label.linger_ms` | `2000` | a whole number, `0`–`3000`; `0` turns the confirmation off |
@@ -205,7 +205,7 @@ canonical chord, each carrying its target's group.
   "path": "/Users/me/.trellis/config.json",
   "settings": {
     "leader": "ctrl+s",
-    "chord_wait_ms": 400,
+    "chord_wait_ms": 600,
     "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 2000 }
   },
   "groups": ["Halves", "Full screen", "Displays"],

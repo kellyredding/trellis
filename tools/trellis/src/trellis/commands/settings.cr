@@ -14,7 +14,7 @@ module Trellis
           leader             The key that enters layout mode, with at least one
                              modifier (default ctrl+s)
           chord_wait_ms      How long a chord that starts a longer one waits,
-                             50 to 2000 (default 400)
+                             50 to 2000 (default 600)
           label.screens      Where the layout-mode label shows: all, main, target
           label.corner       top-left, top-right, bottom-left, bottom-right
           label.linger_ms    How long the label shows a typed chord's result,

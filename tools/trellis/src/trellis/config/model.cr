@@ -15,7 +15,7 @@ module Trellis
 
     record Settings,
       leader : String = "ctrl+s",
-      chord_wait_ms : Int64 = 400_i64,
+      chord_wait_ms : Int64 = 600_i64,
       label_screens : String = "all",
       label_corner : String = "bottom-right",
       label_linger_ms : Int64 = 2000_i64

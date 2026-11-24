@@ -288,7 +288,7 @@ describe "config mutations" do
 
       listed = SpecHelper.run(sandbox, ["settings", "list"]).stdout
       listed.should match(/label\.corner\s+top-left\s*\n/)
-      listed.should match(/chord_wait_ms\s+400\s+\(default\)/)
+      listed.should match(/chord_wait_ms\s+600\s+\(default\)/)
     end
   end
 
