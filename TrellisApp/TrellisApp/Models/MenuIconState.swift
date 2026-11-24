@@ -12,7 +12,11 @@ enum MenuIconState: String, CaseIterable {
 
     var weight: LatticeWeight { self == .layout ? .halfway : .light }
 
-    var opacity: Double { self == .blocked ? 0.35 : 1 }
+    /// Blocked dims the lattice and adds a cut-out "!" badge: dimming alone
+    /// did not read as an error in a real menu bar.
+    var opacity: Double { self == .blocked ? 0.45 : 1 }
+
+    var showsBadge: Bool { self == .blocked }
 
     var statusLine: String {
         switch self {

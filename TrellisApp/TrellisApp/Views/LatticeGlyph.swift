@@ -16,10 +16,14 @@ enum LatticeGlyph {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
             guard let cg = NSGraphicsContext.current?.cgContext else { return false }
             let isDark = NSAppearance.currentDrawing().bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            let ink: Ink = isDark ? .dark : .light
+            cg.saveGState()
             cg.setAlpha(CGFloat(state.opacity))
             cg.beginTransparencyLayer(auxiliaryInfo: nil)
-            draw(cg, weight: state.weight, ink: isDark ? .dark : .light)
+            draw(cg, weight: state.weight, ink: ink)
             cg.endTransparencyLayer()
+            cg.restoreGState()
+            if state.showsBadge { drawBadge(cg, ink: ink) }
             return true
         }
         image.isTemplate = false
@@ -44,6 +48,35 @@ enum LatticeGlyph {
         cg.addPath(field)
         cg.clip()
         fill(cg, slats(width: weight.slat), ink)
+        cg.restoreGState()
+    }
+
+    /// A solid disc centred on the lattice with "!" cut out of it, separated
+    /// from the slats by a cleared ring so it reads at 18 pt. Centred because a
+    /// corner badge with its ring ran past the 18-point box and was clipped.
+    static func drawBadge(_ cg: CGContext, ink: Ink) {
+        let centre = CGPoint(x: 9, y: 9)
+        clear(cg, circle(centre, 5.4))
+        fill(cg, circle(centre, 4.3), ink)
+        clear(cg, CGPath(
+            roundedRect: CGRect(x: 8.35, y: 5.9, width: 1.3, height: 3.9),
+            cornerWidth: 0.65, cornerHeight: 0.65, transform: nil
+        ))
+        clear(cg, circle(CGPoint(x: 9, y: 11.55), 0.75))
+    }
+
+    private static func circle(_ centre: CGPoint, _ radius: CGFloat) -> CGPath {
+        CGPath(
+            ellipseIn: CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2),
+            transform: nil
+        )
+    }
+
+    private static func clear(_ cg: CGContext, _ path: CGPath) {
+        cg.saveGState()
+        cg.setBlendMode(.clear)
+        cg.addPath(path)
+        cg.fillPath()
         cg.restoreGState()
     }
 

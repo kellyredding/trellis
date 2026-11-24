@@ -468,7 +468,9 @@ check("layout mode", MenuIconState.state(accessibilityTrusted: true, layoutModeA
 check("normal", MenuIconState.state(accessibilityTrusted: true, layoutModeActive: false) == .normal)
 check("normal and blocked draw the light weight", MenuIconState.normal.weight == .light && MenuIconState.blocked.weight == .light)
 check("layout mode draws the halfway weight", MenuIconState.layout.weight == .halfway)
-check("blocked is 35% opacity", MenuIconState.blocked.opacity == 0.35 && MenuIconState.normal.opacity == 1)
+check("blocked is 45% opacity", MenuIconState.blocked.opacity == 0.45 && MenuIconState.normal.opacity == 1)
+check("only blocked shows the badge",
+      MenuIconState.blocked.showsBadge && !MenuIconState.normal.showsBadge && !MenuIconState.layout.showsBadge)
 check("the light inner radius", near(LatticeWeight.light.innerRadius, 2.58))
 check("the inner radius floors at 1.2", near(LatticeWeight(frame: 3, slat: 1).innerRadius, 1.2))
 
