@@ -313,6 +313,9 @@ struct PlacementThumbnail: View {
     let target: BindingTarget
     let config: TrellisConfig
 
+    /// Gaps are drawn at the size they would be on a screen this wide.
+    static let screenWidth = 1440.0
+
     var body: some View {
         Canvas { context, size in
             let screen = Rect(x: 0, y: 0, w: Double(size.width), h: Double(size.height))
@@ -320,7 +323,7 @@ struct PlacementThumbnail: View {
             switch target {
             case .placement(let name):
                 guard let placement = config.placements[name],
-                      let region = config.region(for: placement)
+                      let region = config.region(for: placement)?.scaled(by: screen.w / Self.screenWidth)
                 else { return }
                 let area = Geometry.area(visible: screen, region: region)
                 context.stroke(Path(cg(area)), with: .color(.secondary.opacity(0.4)), lineWidth: 0.5)

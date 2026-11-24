@@ -9,7 +9,7 @@ private GUTTER_CONFIG = <<-JSON
         "margins": {
           "right": 0.05
         },
-        "gap": 0.005
+        "gap": 10
       }
     },
     "placements": {
@@ -248,17 +248,64 @@ describe "config mutations" do
   it "adds, sets and removes regions" do
     SpecHelper.sandbox do |sandbox|
       sandbox.write_config(GUTTER_CONFIG)
-      SpecHelper.run(sandbox, ["regions", "add", "stack", "--margin-right", "0.05", "--gap-x", "0.005", "--gap-y", "0.025"]).exit_code.should eq(0)
-      SpecHelper.run(sandbox, ["regions", "set", "gutter", "--gap-y", "0.02"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["regions", "add", "stack", "--margin-right", "0.05", "--gap-x", "10", "--gap-y", "25"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["regions", "set", "gutter", "--gap-y", "4"]).exit_code.should eq(0)
+      sandbox.read_config.should contain(%("gap": {\n        "x": 10,\n        "y": 4\n      }))
 
       regions = SpecHelper.run(sandbox, ["config", "export", "--json"]).json["regions"]
-      SpecHelper.normalize(regions["stack"]["gap"]).should eq(SpecHelper.normalize(JSON.parse(%({"x": 0.005, "y": 0.025}))))
-      SpecHelper.normalize(regions["gutter"]["gap"]).should eq(SpecHelper.normalize(JSON.parse(%({"x": 0.005, "y": 0.02}))))
+      SpecHelper.normalize(regions["stack"]["gap"]).should eq(SpecHelper.normalize(JSON.parse(%({"x": 10, "y": 25}))))
+      SpecHelper.normalize(regions["gutter"]["gap"]).should eq(SpecHelper.normalize(JSON.parse(%({"x": 10, "y": 4}))))
+
+      SpecHelper.run(sandbox, ["regions", "set", "stack", "--gap", "12.5"]).exit_code.should eq(0)
+      sandbox.read_config.should contain(%("gap": 12.5))
 
       refused = SpecHelper.run(sandbox, ["regions", "remove", "gutter"])
       refused.exit_code.should eq(1)
       refused.stderr.should contain("used by left-half")
       SpecHelper.run(sandbox, ["regions", "remove", "stack"]).exit_code.should eq(0)
+    end
+  end
+
+  it "lists and shows gaps in points" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      SpecHelper.run(sandbox, ["regions", "add", "stack", "--gap-x", "10", "--gap-y", "2.5"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["regions", "add", "bare"]).exit_code.should eq(0)
+
+      listed = SpecHelper.run(sandbox, ["regions", "list"]).stdout
+      listed.should match(/^gutter\s+right 0\.05\s+10 pt\s+left-half$/m)
+      listed.should match(/^stack\s+none\s+x 10 pt, y 2\.5 pt\s*$/m)
+      listed.should match(/^bare\s+none\s+0 pt\s*$/m)
+      SpecHelper.run(sandbox, ["regions", "show", "stack"]).stdout.should contain("  gap         x 10 pt, y 2.5 pt\n")
+
+      shown = SpecHelper.run(sandbox, ["regions", "show", "stack", "--json"]).json
+      shown["gap"].should eq(JSON.parse(%({"x": 10, "y": 2.5})))
+    end
+  end
+
+  it "refuses a gap that looks like a fraction of the screen, saying gaps are points" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      {
+        ["regions", "set", "gutter", "--gap", "0.005"]   => "regions.gutter.gap: 0.005 looks like a fraction of the screen; gaps are now in points (try 10)",
+        ["regions", "set", "gutter", "--gap-y", "0.025"] => "regions.gutter.gap.y: 0.025 looks like a fraction of the screen; gaps are now in points (try 10)",
+        ["regions", "set", "gutter", "--gap", "101"]     => "regions.gutter.gap: must be a number of points from 0 to 100, got 101",
+      }.each do |argv, message|
+        result = SpecHelper.run(sandbox, argv)
+        result.exit_code.should eq(1), "#{argv.join(" ")} exited #{result.exit_code}: #{result.stderr}"
+        result.stderr.should contain("nothing was written")
+        result.stderr.should contain(message)
+        sandbox.read_config.should eq(GUTTER_CONFIG)
+      end
+
+      sandbox.write_config(GUTTER_CONFIG.sub(%("gap": 10), %("gap": {"x": 0.005, "y": 0.025})))
+      validate = SpecHelper.run(sandbox, ["config", "validate"])
+      validate.exit_code.should eq(1)
+      validate.stderr.should contain("regions.gutter.gap.x: 0.005 looks like a fraction of the screen; gaps are now in points (try 10)")
+      validate.stderr.should contain("regions.gutter.gap.y: 0.025 looks like a fraction of the screen; gaps are now in points (try 10)")
+
+      SpecHelper.run(sandbox, ["regions", "set", "gutter", "--gap", "10"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["config", "export", "--json"]).json["regions"]["gutter"]["gap"].should eq(JSON.parse(%({"x": 10, "y": 10})))
     end
   end
 

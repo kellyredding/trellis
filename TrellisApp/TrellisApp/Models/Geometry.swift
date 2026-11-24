@@ -36,6 +36,8 @@ struct Margins: Codable, Equatable {
     static let zero = Margins(top: 0, right: 0, bottom: 0, left: 0)
 }
 
+/// Points between neighbouring slots, across (x) and down (y). Margins are
+/// fractions of the visible frame; gaps are not.
 struct Gap: Codable, Equatable {
     var x: Double
     var y: Double
@@ -48,6 +50,12 @@ struct Region: Codable, Equatable {
     var gap: Gap
 
     static let none = Region(margins: .zero, gap: .zero)
+
+    /// For drawing a screen at `factor` times its size: margins already scale
+    /// with the frame, but gaps are points.
+    func scaled(by factor: Double) -> Region {
+        Region(margins: margins, gap: Gap(x: gap.x * factor, y: gap.y * factor))
+    }
 }
 
 /// See docs/contract.md, "Geometry". Every frame here is in global top-left
@@ -68,8 +76,8 @@ enum Geometry {
     /// The contract's steps 1–2, before rounding.
     static func slot(_ rect: Rect, visible v: Rect, region: Region) -> Rect {
         let a = area(visible: v, region: region)
-        let gx = region.gap.x * v.w
-        let gy = region.gap.y * v.h
+        let gx = region.gap.x
+        let gy = region.gap.y
         return Rect(
             x: a.x + rect.x * (a.w + gx),
             y: a.y + rect.y * (a.h + gy),

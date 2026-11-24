@@ -12,15 +12,15 @@ module Trellis
           list
           show NAME
           add NAME [--margin-top F] [--margin-right F] [--margin-bottom F]
-                   [--margin-left F] [--gap F | --gap-x F --gap-y F]
+                   [--margin-left F] [--gap PT | --gap-x PT --gap-y PT]
           set NAME [same options]  Changes only the values given
           remove NAME              Refused while a placement uses it
 
         Margins shrink the screen's visible frame, each a fraction of its width
-        (left, right) or height (top, bottom); the 5% right gutter is
-        --margin-right 0.05. The gap separates windows on edges that face
-        another slot, as a fraction of the width (x) or height (y). Every
-        value is from 0 to 0.5.
+        (left, right) or height (top, bottom) from 0 to 0.5; the 5% right
+        gutter is --margin-right 0.05. The gap is the space in points between
+        windows on edges that face another slot, across (x) and down (y):
+        0, or from 1 to 100. --gap 10 sets both.
 
         Changes rewrite the config file (see `trellis config --help`).
         TEXT
@@ -167,9 +167,9 @@ module Trellis
 
       private def gap_text(region : Config::Region) : String
         if region.gap_x == region.gap_y
-          Config.format_number(region.gap_x)
+          "#{Config.format_number(region.gap_x)} pt"
         else
-          "x #{Config.format_number(region.gap_x)}, y #{Config.format_number(region.gap_y)}"
+          "x #{Config.format_number(region.gap_x)} pt, y #{Config.format_number(region.gap_y)} pt"
         end
       end
 

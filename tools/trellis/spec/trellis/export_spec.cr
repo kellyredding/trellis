@@ -34,6 +34,14 @@ describe Trellis::Config::Export do
     json.should contain(%("w": 1,))
   end
 
+  it "exports both gap forms as points on each axis" do
+    model = SpecHelper.validate(%({"regions": {"even": {"gap": 10}, "split": {"gap": {"x": 10, "y": 2.5}}, "down": {"gap": {"y": 4}}}})).model!
+    regions = JSON.parse(Trellis::Config::Export.to_json(model))["regions"]
+    regions["even"]["gap"].should eq(JSON.parse(%({"x": 10, "y": 10})))
+    regions["split"]["gap"].should eq(JSON.parse(%({"x": 10, "y": 2.5})))
+    regions["down"]["gap"].should eq(JSON.parse(%({"x": 0, "y": 4})))
+  end
+
   it "exports groups in order, each placement's and binding's group, and only the configured actions" do
     model = SpecHelper.validate(<<-JSON).model!
       {

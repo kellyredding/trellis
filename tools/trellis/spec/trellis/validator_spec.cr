@@ -82,11 +82,29 @@ describe Trellis::Config::Validator do
   end
 
   describe "regions" do
-    it "bounds each margin and gap to 0..0.5" do
+    it "bounds each margin to 0..0.5" do
       SpecHelper.errors(%({"regions": {"a": {"margins": {"right": 0.6}}}})).first.should contain("0 to 0.5")
       SpecHelper.errors(%({"regions": {"a": {"margins": {"top": -0.1}}}})).first.should contain("0 to 0.5")
-      SpecHelper.errors(%({"regions": {"a": {"gap": 0.51}}})).first.should contain("regions.a.gap")
-      SpecHelper.errors(%({"regions": {"a": {"gap": {"x": 0.1, "y": 0.7}}}})).first.should contain("regions.a.gap.y")
+    end
+
+    it "bounds each gap to 0..100 points" do
+      SpecHelper.errors(%({"regions": {"a": {"gap": 100.5}}}))
+        .should eq(["regions.a.gap: must be a number of points from 0 to 100, got 100.5"])
+      SpecHelper.errors(%({"regions": {"a": {"gap": -1}}}))
+        .should eq(["regions.a.gap: must be a number of points from 0 to 100, got -1"])
+      SpecHelper.errors(%({"regions": {"a": {"gap": {"x": 10, "y": "4"}}}}))
+        .should eq([%(regions.a.gap.y: must be a number of points from 0 to 100, got "4")])
+      SpecHelper.errors(%({"regions": {"a": {"gap": 0}, "b": {"gap": 1}, "c": {"gap": 100}}})).should be_empty
+    end
+
+    it "refuses a gap that looks like a fraction of the screen, suggesting points" do
+      SpecHelper.errors(%({"regions": {"gutter": {"gap": 0.005}}}))
+        .should eq(["regions.gutter.gap: 0.005 looks like a fraction of the screen; gaps are now in points (try 10)"])
+      SpecHelper.errors(%({"regions": {"corners": {"gap": {"x": 0.005, "y": 0.025}}}})).should eq([
+        "regions.corners.gap.x: 0.005 looks like a fraction of the screen; gaps are now in points (try 10)",
+        "regions.corners.gap.y: 0.025 looks like a fraction of the screen; gaps are now in points (try 10)",
+      ])
+      SpecHelper.errors(%({"regions": {"a": {"gap": {"x": 10, "y": 0.99}}}})).first.should contain("regions.a.gap.y: 0.99 looks like")
     end
 
     it "needs each axis's margins to sum to less than 1" do
@@ -97,10 +115,10 @@ describe Trellis::Config::Validator do
       SpecHelper.errors(%({"regions": {"a": {"margins": {"left": 0.5, "right": 0.49}}}})).should be_empty
     end
 
-    it "expands both gap forms and missing margins" do
-      model = SpecHelper.validate(%({"regions": {"a": {"gap": 0.01}, "b": {"gap": {"x": 0.02, "y": 0.03}}, "c": null}})).model!
+    it "expands both gap forms, in points, and missing margins" do
+      model = SpecHelper.validate(%({"regions": {"a": {"gap": 10}, "b": {"gap": {"x": 10, "y": 2.5}}, "c": null, "d": {"gap": {"y": 4}}}})).model!
       model.regions.map { |region| {region.name, region.gap_x, region.gap_y} }
-        .should eq([{"a", 0.01, 0.01}, {"b", 0.02, 0.03}, {"c", 0.0, 0.0}])
+        .should eq([{"a", 10.0, 10.0}, {"b", 10.0, 2.5}, {"c", 0.0, 0.0}, {"d", 0.0, 4.0}])
       model.regions.first.margins.should eq(Trellis::Config::Margins.new)
     end
   end

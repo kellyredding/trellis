@@ -89,7 +89,7 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
       "margins": {
         "right": 0.05
       },
-      "gap": 0.005
+      "gap": 10
     }
   },
   "placements": {
@@ -138,8 +138,9 @@ one and restarts the timer. The socket's `place`, `screen.move` and `chord`
 events never show it.
 
 A region's `margins` are fractions of the visible frame, per edge (`top`,
-`right`, `bottom`, `left`); its `gap` is a number, or `{"x": 0.005, "y":
-0.025}`.
+`right`, `bottom`, `left`), so they scale with the screen. Its `gap` is a
+fixed space in **points** between neighbouring windows: one number for both
+axes, or `{"x": 10, "y": 4}` for across and down separately.
 
 `groups` lists the group names in display order: the app's Bindings tab shows
 one section per group, in this order, holding the bindings whose target is in
@@ -167,9 +168,13 @@ existing order, arrays of plain values on one line, and a trailing newline.
 - Settings: each value is one the table above allows.
 - Groups: a list of strings, each non-empty, without leading or trailing
   spaces, and listed once; any other characters are allowed (`"60/40"`).
-- Regions: names match `[a-z0-9][a-z0-9-]*`; each margin and each gap is a
-  number in `0…0.5`; per axis the two margins sum to less than `1`; a gap
-  object with only `x` or `y` takes `0` for the other.
+- Regions: names match `[a-z0-9][a-z0-9-]*`; each margin is a number in
+  `0…0.5`; per axis the two margins sum to less than `1`. Each gap is a
+  number of points in `0…100`, decimals allowed; a gap object with only `x`
+  or `y` takes `0` for the other. A gap above `0` and below `1` is refused as
+  a fraction of the screen, the unit gaps had before they were points:
+  `regions.corners.gap.y: 0.025 looks like a fraction of the screen; gaps are
+  now in points (try 10)`.
 - Placements: `rect` is `[x, y, w, h]` (or `{x, y, w, h}`) with `x, y ≥ 0`,
   `w, h > 0`, `x + w ≤ 1`, `y + h ≤ 1` (to within `1e-9`); `region`, when
   given, names a defined region; `group` is required and names an entry in
@@ -212,7 +217,7 @@ canonical chord, each carrying its target's group.
   "regions": {
     "gutter": {
       "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
-      "gap": { "x": 0.005, "y": 0.005 }
+      "gap": { "x": 10, "y": 10 }
     }
   },
   "placements": {
@@ -238,6 +243,7 @@ canonical chord, each carrying its target's group.
 - `actions` holds only the built-in actions the config lists.
 - `target` has exactly one of `placement` or `action`.
 - A binding's `group` is its target placement's or action's group.
+- A region's `gap` is always `{x, y}`, in points.
 - `prefix` is true when a longer binding begins with this chord.
 - An invalid config exits non-zero with the errors on stderr; the app keeps
   its last good config and shows the error.
@@ -255,16 +261,17 @@ and the Dock):
 1. **Area** `A` = `V` shrunk by the region's margins, each a fraction of
    `V`'s width (left, right) or height (top, bottom).
 2. **Slot:** each axis is laid out as a grid whose cells are separated by the
-   region's gap, `gx` = gap x · `V.w` and `gy` = gap y · `V.h` points:
+   region's gap, `gx` = gap x and `gy` = gap y, in points whatever the
+   screen's size or shape:
    `x = A.x + rect.x·(A.w + gx)`, `w = rect.w·(A.w + gx) − gx`, and likewise
    `y` and `h` with `A.h` and `gy`. Edges on the area boundary stay on it,
    neighbouring slots are exactly one gap apart, and equal fractions give
    equal slots however many share the axis.
 3. Round to whole points.
 
-Checks: `V.w = 1000`, region `{"margins": {"right": 0.05}, "gap": 0.005}`,
+Checks: `V.w = 1000`, region `{"margins": {"right": 0.05}, "gap": 5}`,
 rect `[0.5, 0, 0.5, 1]` → `x = 477.5`, `w = 472.5` before rounding. And
-`V.h = 1000`, gap y `0.025`, rects `[·, k/3, ·, 1/3]` for k = 0, 1, 2 → each
+`V.h = 1000`, gap y `25`, rects `[·, k/3, ·, 1/3]` for k = 0, 1, 2 → each
 `h = 316.67`, `y = 0, 341.67, 683.33`: three equal slots, two 25-point gaps.
 
 `screen-east` / `screen-west` move the window to the nearest display whose

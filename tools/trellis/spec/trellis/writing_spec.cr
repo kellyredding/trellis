@@ -13,7 +13,7 @@ describe Trellis::Config::Emitter do
         "bindings": {"l l": "b", ",": "a", "ctrl+h": "a"},
         "actions": {"screen-west": {"group": "60/40"}},
         "placements": {"b": {"rect": [0.5, 0, 0.5, 1], "region": "g"}, "a": {"rect": {"x": 0, "y": 0, "w": 1, "h": 1}}},
-        "regions": {"g": {"margins": {"right": 0.05}, "gap": 0.005}, "empty": {}},
+        "regions": {"g": {"margins": {"right": 0.05}, "gap": 2.5}, "empty": {}},
         "groups": ["Zed", "60/40"],
         "settings": {"label": {"screens": "main"}, "leader": "ctrl+b"},
         "version": 1
@@ -35,7 +35,7 @@ describe Trellis::Config::Emitter do
             "margins": {
               "right": 0.05
             },
-            "gap": 0.005
+            "gap": 2.5
           },
           "empty": {}
         },

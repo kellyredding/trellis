@@ -35,6 +35,9 @@ Every placement belongs to a group (`placements add NAME --rect … --group G`),
 and a built-in action needs one (`actions set screen-east --group G`) before a
 chord can be bound to it. `groups list|add|rename|remove|move` manages the
 ordered list; `bindings list` prints the bindings under their groups.
+`regions add|set` take margins as fractions of the visible frame
+(`--margin-right 0.05`) and gaps in points (`--gap 10`, or `--gap-x` and
+`--gap-y`); `regions list|show` print gaps with their unit (`10 pt`).
 
 **Health:** `doctor`, `version`, `update`. `doctor` also reports the install
 record `install.sh` leaves at `~/.trellis/installed-manifest.json`, and checks

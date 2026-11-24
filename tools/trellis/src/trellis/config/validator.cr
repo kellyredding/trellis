@@ -19,6 +19,7 @@ module Trellis
       LABEL_CORNERS = ["top-left", "top-right", "bottom-left", "bottom-right"]
       CHORD_WAIT_MS = 50_i64..2000_i64
       LINGER_MS     = 0_i64..3000_i64
+      GAP_POINTS    = 0.0..100.0
 
       def self.validate(tree : JSON::Any, source : Source, path : Path) : Result
         new(tree, source, path).run
@@ -176,10 +177,10 @@ module Trellis
           if raw = body["gap"]?
             if axes = raw.as_h?
               allowed_keys("#{where}.gap", axes, ["x", "y"])
-              gap_x = fraction("#{where}.gap.x", axes["x"]?)
-              gap_y = fraction("#{where}.gap.y", axes["y"]?)
+              gap_x = points("#{where}.gap.x", axes["x"]?)
+              gap_y = points("#{where}.gap.y", axes["y"]?)
             else
-              gap_x = gap_y = fraction("#{where}.gap", raw)
+              gap_x = gap_y = points("#{where}.gap", raw)
             end
           end
 
@@ -400,6 +401,22 @@ module Trellis
           number
         else
           error("#{where}: must be a number from 0 to 0.5, got #{show(value)}")
+          0.0
+        end
+      end
+
+      # A gap in points. A non-zero gap below 1 is a gap from before gaps were
+      # points, a fraction of the screen, so it is refused rather than read.
+      private def points(where : String, value : JSON::Any?) : Float64
+        return 0.0 if value.nil?
+        number = Validator.number(value)
+        if number && 0 < number < 1
+          error("#{where}: #{show(value)} looks like a fraction of the screen; gaps are now in points (try 10)")
+          0.0
+        elsif number && GAP_POINTS.includes?(number)
+          number
+        else
+          error("#{where}: must be a number of points from 0 to 100, got #{show(value)}")
           0.0
         end
       end

@@ -89,6 +89,14 @@ shows one section per group, in that order. The starter's groups are Halves,
 Corners, 60/40, Full screen and Displays. `trellis groups` adds, renames,
 reorders and removes them; `trellis actions set` gives an action its group.
 
+A placement can name a `region` that keeps margins clear and gaps between
+windows: `"regions": {"gutter": {"margins": {"right": 0.05}, "gap": 10}}`
+leaves the right 5% of the screen free and 10 points between neighbouring
+windows. Margins are fractions of the visible frame, so they scale with the
+screen; a gap is points, one number or `{"x": 10, "y": 4}`, so windows sit
+the same distance apart across and down on any display. `trellis regions`
+adds and changes them (`trellis regions set gutter --gap 10`).
+
 The file is strict JSON. Edit it with the CLI, or by hand followed by
 `trellis config validate`; `docs/contract.md` has every key.
 

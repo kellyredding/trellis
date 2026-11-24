@@ -112,7 +112,7 @@ module Trellis
         end
       end
 
-      # Whole fractions print as integers (`0`, `1`), as the contract writes them.
+      # Whole numbers print as integers (`0`, `1`, `10`), as the contract writes them.
       def number(json : JSON::Builder, value : Float64) : Nil
         json.raw(Config.format_number(value))
       end

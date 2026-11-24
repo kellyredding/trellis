@@ -123,8 +123,8 @@ if let config = fixture {
     check("the linger default is 2000 ms", Settings.defaultLingerMs == 2000)
     check("two regions", config.regions.count == 2)
     check("gutter margins", config.regions["gutter"]?.margins == Margins(top: 0, right: 0.05, bottom: 0, left: 0))
-    check("gutter gap", config.regions["gutter"]?.gap == Gap(x: 0.005, y: 0.005))
-    check("stack gap has its own y", config.regions["stack"]?.gap == Gap(x: 0.005, y: 0.025))
+    check("gutter gap is 10 points both ways", config.regions["gutter"]?.gap == Gap(x: 10, y: 10))
+    check("stack gap has its own y in points", config.regions["stack"]?.gap == Gap(x: 10, y: 2.5))
     check("four placements", config.placements.count == 4)
     check("a null region decodes as none", config.placements["right-half-full"]?.region == nil)
     check("a region name decodes", config.placements["left-half"]?.region == "gutter")
@@ -193,7 +193,7 @@ check("a group with no bindings has no section", grouped?.bindingSections.map(\.
 
 // MARK: - Geometry
 
-let gutter = Region(margins: Margins(top: 0, right: 0.05, bottom: 0, left: 0), gap: Gap(x: 0.005, y: 0.005))
+let gutter = Region(margins: Margins(top: 0, right: 0.05, bottom: 0, left: 0), gap: Gap(x: 5, y: 5))
 let thousand = Rect(x: 0, y: 0, w: 1000, h: 800)
 let rightSlot = Geometry.slot(Rect(x: 0.5, y: 0, w: 0.5, h: 1), visible: thousand, region: gutter)
 check("contract check: x = 477.5 before rounding", near(rightSlot.x, 477.5))
@@ -205,8 +205,12 @@ let leftSlot = Geometry.slot(Rect(x: 0, y: 0, w: 0.5, h: 1), visible: thousand, 
 check("a left half keeps its outer edge and gives up half the gap",
       near(leftSlot.x, 0) && near(leftSlot.w, 472.5) && near(leftSlot.h, 800))
 check("full height edges do not move", near(leftSlot.y, 0) && near(rightSlot.h, 800))
+let wideV = Rect(x: 0, y: 0, w: 2000, h: 600)
+let wideLeft = Geometry.slot(Rect(x: 0, y: 0, w: 0.5, h: 1), visible: wideV, region: gutter)
+let wideRight = Geometry.slot(Rect(x: 0.5, y: 0, w: 0.5, h: 1), visible: wideV, region: gutter)
+check("a gap is the same points on a wider screen", near(wideRight.x - wideLeft.maxX, 5))
 
-let stack = Region(margins: Margins(top: 0, right: 0.05, bottom: 0, left: 0), gap: Gap(x: 0.005, y: 0.025))
+let stack = Region(margins: Margins(top: 0, right: 0.05, bottom: 0, left: 0), gap: Gap(x: 5, y: 25))
 let squareV = Rect(x: 0, y: 0, w: 1000, h: 1000)
 let quarter = Geometry.slot(Rect(x: 0.5, y: 0, w: 0.5, h: 0.25), visible: squareV, region: stack)
 check("a quarter of four keeps its outer edge and is a quarter of the space between gaps",
@@ -226,6 +230,8 @@ let margined = Geometry.area(
 )
 check("margins are fractions of the visible frame per edge",
       margined == Rect(x: 200, y: 100, w: 850, h: 350))
+check("scaling a region scales its gap and keeps its margins",
+      stack.scaled(by: 0.5) == Region(margins: stack.margins, gap: Gap(x: 2.5, y: 12.5)))
 
 // The primary screen (1728 × 1117 with a 38 pt menu bar), one to its right
 // at x = 1728 and one above it at negative y.

@@ -11,11 +11,11 @@
   "regions": {
     "gutter": {
       "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
-      "gap": { "x": 0.005, "y": 0.005 }
+      "gap": { "x": 10, "y": 10 }
     },
     "stack": {
       "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
-      "gap": { "x": 0.005, "y": 0.025 }
+      "gap": { "x": 10, "y": 2.5 }
     }
   },
   "placements": {
