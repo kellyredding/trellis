@@ -298,7 +298,6 @@ describe "trellis doctor" do
         }
         JSON
       result = SpecHelper.run(sandbox, ["doctor"])
-      result.exit_code.should eq(0)
       result.stdout.should match(/^ok\s+install\s+Trellis 0\.1\.0 \(abc123def456, uncommitted changes\), built /m)
       result.stdout.should contain("built 2026-11-24T10:00:00Z, signed by Trellis Release Signing\n")
 
@@ -308,11 +307,72 @@ describe "trellis doctor" do
     end
   end
 
+  it "checks the installed app, its signer, the CLI and Launch Services against the record" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_manifest(sha256: sandbox.install_cli)
+      app = sandbox.install_app("abc123def456")
+      SpecHelper.write_executable(sandbox.lsregister, <<-SH)
+        #!/bin/sh
+        echo "path:          #{app} (0x1a2b)"
+        echo "path:          /tmp/build/Debug/Trellis.app (0x3c4d)"
+        echo "path:          /Applications/Other.app (0x5e6f)"
+        SH
+
+      result = SpecHelper.run(sandbox, ["doctor"])
+      result.stdout.should match(/^ok\s+installed app\s+Trellis\.app 0\.1\.0 \(abc123def456\)$/m)
+      result.stdout.should match(/^FAIL\s+app signer\s+Trellis\.app is ad hoc or unsigned/m)
+      result.stdout.should match(/^ok\s+installed cli\s+.*bin\/trellis is the recorded build$/m)
+      result.stdout.should match(/^ok\s+registration\s+Launch Services knows #{Regex.escape(app.to_s)}$/m)
+      result.stdout.should match(/^warn\s+registration\s+another Trellis\.app is registered: \/tmp\/build\/Debug\/Trellis\.app$/m)
+      result.exit_code.should eq(1)
+
+      json = SpecHelper.run(sandbox, ["doctor", "--json"]).json["install"]
+      json["app"]["commit"].should eq("abc123def456")
+      json["app"]["signer"].raw.should be_nil
+      json["cli"]["matches"].should eq(true)
+      json["registered"].as_a.map(&.as_s).should eq([app.to_s, "/tmp/build/Debug/Trellis.app"])
+    end
+  end
+
+  it "fails an installed app or CLI that is not the recorded build" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_manifest(commit: "abc123def456", sha256: "00")
+      sandbox.install_cli
+      sandbox.install_app("999999999999")
+
+      result = SpecHelper.run(sandbox, ["doctor"])
+      result.exit_code.should eq(1)
+      result.stdout.should match(/^FAIL\s+installed app\s+Trellis\.app is from 999999999999, the install record from abc123def456/m)
+      result.stdout.should match(/^FAIL\s+installed cli\s+.* is not the build the install record names/m)
+      result.stdout.should match(/^warn\s+registration\s+could not ask Launch Services/m)
+
+      sandbox.install_app(nil)
+      SpecHelper.run(sandbox, ["doctor"]).stdout.should match(/^FAIL\s+installed app\s+Trellis\.app carries no build commit/m)
+    end
+  end
+
+  it "fails a missing app or CLI, and an app that is a link into a build" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_manifest
+      result = SpecHelper.run(sandbox, ["doctor"])
+      result.stdout.should match(/^FAIL\s+installed app\s+.*Trellis\.app is missing/m)
+      result.stdout.should match(/^FAIL\s+installed cli\s+.*bin\/trellis is missing/m)
+      result.stdout.should_not contain("app signer")
+
+      build = sandbox.root / "build" / "Trellis.app"
+      Dir.mkdir_p(build)
+      Dir.mkdir_p(sandbox.applications)
+      File.symlink(build, sandbox.applications / "Trellis.app")
+      SpecHelper.run(sandbox, ["doctor"]).stdout.should match(/^FAIL\s+installed app\s+.*Trellis\.app is a link to .*build\/Trellis\.app, not an installed copy/m)
+    end
+  end
+
   it "warns, without failing, when there is no install record or it is unreadable" do
     SpecHelper.sandbox do |sandbox|
       result = SpecHelper.run(sandbox, ["doctor"])
       result.exit_code.should eq(0)
       result.stdout.should match(/^warn\s+install\s+no install record at .*installed-manifest\.json; `trellis update`/m)
+      result.stdout.should_not contain("installed app")
       SpecHelper.run(sandbox, ["doctor", "--json"]).json["install"]["manifest"].raw.should be_nil
 
       File.write(sandbox.root / "installed-manifest.json", "{")

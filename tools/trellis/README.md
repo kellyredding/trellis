@@ -37,7 +37,10 @@ chord can be bound to it. `groups list|add|rename|remove|move` manages the
 ordered list; `bindings list` prints the bindings under their groups.
 
 **Health:** `doctor`, `version`, `update`. `doctor` also reports the install
-record `install.sh` leaves at `~/.trellis/installed-manifest.json`.
+record `install.sh` leaves at `~/.trellis/installed-manifest.json`, and checks
+the installed app's build commit and signer, the installed CLI's checksum,
+and which copies of Trellis.app Launch Services knows against it.
+`TRELLIS_APPLICATIONS_DIR` and `TRELLIS_LSREGISTER` exist for its specs only.
 
 Run `trellis <command> --help` for each command's options.
 

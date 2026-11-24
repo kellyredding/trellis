@@ -349,7 +349,7 @@ struct AboutSettings: View {
                 SettingsValue(text: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")
             }
             SettingsRow(label: "Commit") {
-                SettingsValue(text: Bundle.main.object(forInfoDictionaryKey: "TrellisCommit") as? String ?? "development build")
+                SettingsValue(text: Bundle.main.object(forInfoDictionaryKey: "TrellisBuildCommit") as? String ?? "development build")
             }
             SettingsRow(label: "Signed by") { SettingsValue(text: CodeSigning.signer) }
             SettingsRow(label: "Socket") { SettingsValue(text: model.paths.socket.path) }
