@@ -278,8 +278,8 @@ describe "config mutations" do
   it "gets, sets and exports label.linger_ms, refusing a bad value as a usage error" do
     SpecHelper.sandbox do |sandbox|
       sandbox.write_config(GUTTER_CONFIG)
-      SpecHelper.run(sandbox, ["settings", "get", "label.linger_ms"]).stdout.should eq("800\n")
-      SpecHelper.run(sandbox, ["settings", "list"]).stdout.should match(/label\.linger_ms\s+800\s+\(default\)/)
+      SpecHelper.run(sandbox, ["settings", "get", "label.linger_ms"]).stdout.should eq("1500\n")
+      SpecHelper.run(sandbox, ["settings", "list"]).stdout.should match(/label\.linger_ms\s+1500\s+\(default\)/)
 
       ["3001", "-1", "soon", "1.5"].each do |bad|
         result = SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", bad])
@@ -294,8 +294,8 @@ describe "config mutations" do
       sandbox.read_config.should contain(%("label": {\n      "linger_ms": 0\n    }))
       SpecHelper.run(sandbox, ["settings", "get", "label.linger_ms", "--json"]).json["value"].should eq(0)
 
-      SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", "1500"]).exit_code.should eq(0)
-      SpecHelper.run(sandbox, ["config", "export", "--json"]).json["settings"]["label"]["linger_ms"].should eq(1500)
+      SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", "2000"]).exit_code.should eq(0)
+      SpecHelper.run(sandbox, ["config", "export", "--json"]).json["settings"]["label"]["linger_ms"].should eq(2000)
     end
   end
 

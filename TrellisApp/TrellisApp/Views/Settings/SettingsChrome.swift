@@ -77,16 +77,64 @@ struct SettingsCard<Content: View>: View {
     }
 }
 
+enum SettingsMetrics {
+    static let windowWidth: CGFloat = 580
+    /// Every popup and slider takes this width, so they share both edges.
+    static let controlWidth: CGFloat = 220
+    static let readoutWidth: CGFloat = 64
+}
+
+/// Label on the left, controls flush against the trailing edge, as in Galaxy.
 struct SettingsRow<Content: View>: View {
     let label: String
     @ViewBuilder let content: Content
 
     var body: some View {
-        HStack {
-            Text(label)
-            Spacer()
+        HStack(spacing: 8) {
+            Text(label).lineLimit(1)
+            Spacer(minLength: 12)
             content
         }
+        .frame(maxWidth: .infinity, minHeight: 22)
+    }
+}
+
+/// A value readout and a slider, the slider on the trailing edge so it lines
+/// up with the popups in the rows around it.
+struct SettingsSliderRow: View {
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let readout: String
+    let onCommit: () -> Void
+
+    var body: some View {
+        SettingsRow(label: label) {
+            Text(readout)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: SettingsMetrics.readoutWidth, alignment: .trailing)
+            Slider(value: $value, in: range, step: step) { editing in
+                if !editing { onCommit() }
+            }
+            .frame(width: SettingsMetrics.controlWidth)
+        }
+    }
+}
+
+/// Text on the trailing edge, shortened in the middle when it does not fit.
+struct SettingsValue: View {
+    let text: String
+    var color: Color = .secondary
+
+    var body: some View {
+        Text(text)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .foregroundStyle(color)
+            .textSelection(.enabled)
+            .help(text)
     }
 }
 

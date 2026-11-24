@@ -7,11 +7,16 @@ final class Hotkey {
     var onPress: (() -> Void)?
     private(set) var registered: KeyToken?
     private(set) var problem: String?
+    private(set) var isSuspended = false
 
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
+    private var wanted: KeyToken?
 
+    /// While suspended this only remembers the token; `resume()` registers it.
     func register(_ token: KeyToken) {
+        wanted = token
+        guard !isSuspended else { return }
         if token == registered, hotKeyRef != nil { return }
         unregister()
         installHandler()
@@ -40,6 +45,20 @@ final class Hotkey {
         if let hotKeyRef { UnregisterEventHotKey(hotKeyRef) }
         hotKeyRef = nil
         registered = nil
+    }
+
+    /// A registered hot key consumes its key-down before any window sees it,
+    /// so recording a new leader needs the old one out of the way.
+    func suspend() {
+        guard !isSuspended else { return }
+        isSuspended = true
+        unregister()
+    }
+
+    func resume() {
+        guard isSuspended else { return }
+        isSuspended = false
+        if let wanted { register(wanted) }
     }
 
     private func installHandler() {

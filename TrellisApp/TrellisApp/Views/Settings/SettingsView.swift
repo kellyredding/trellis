@@ -32,7 +32,7 @@ struct SettingsView: View {
             }
             .padding(18)
         }
-        .frame(width: 580)
+        .frame(width: SettingsMetrics.windowWidth)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 }
@@ -53,19 +53,24 @@ enum SettingKey {
 struct GeneralSettings: View {
     @ObservedObject var model: AppModel
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
-    @State private var leaderText = ""
     @State private var leaderProblem: String?
     @State private var chordWait: Double = Double(Settings.defaultChordWaitMs)
 
     private var settings: Settings? { model.configStore.config?.settings }
+    private var leader: KeyToken? { settings?.leaderToken }
+    private var defaultLeader: KeyToken { KeyToken(Settings.defaultLeader)! }
 
     var body: some View {
         SettingsCard(title: "Startup") {
-            Toggle("Start Trellis at login", isOn: Binding(
-                get: { launchAtLogin },
-                set: { launchAtLogin = LaunchAtLogin.set($0) }
-            ))
-            .toggleStyle(.checkbox)
+            SettingsRow(label: "Start Trellis at login") {
+                Toggle("", isOn: Binding(
+                    get: { launchAtLogin },
+                    set: { launchAtLogin = LaunchAtLogin.set($0) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+            }
             if LaunchAtLogin.requiresApproval {
                 SettingsCaption("Waiting for approval in System Settings › General › Login Items.", color: .orange)
             }
@@ -83,41 +88,45 @@ struct GeneralSettings: View {
 
         SettingsCard(title: "Keys") {
             SettingsRow(label: "Leader") {
-                TextField(Settings.defaultLeader, text: $leaderText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 120)
-                    .onSubmit(saveLeader)
-                Text(KeyToken(leaderText)?.display(uppercased: true) ?? "")
-                    .frame(width: 44, alignment: .leading)
-                    .foregroundStyle(.secondary)
+                if let leader, leader != defaultLeader {
+                    Button {
+                        saveLeader(defaultLeader)
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Reset to \(defaultLeader.display(uppercased: true))")
+                }
+                LeaderRecorder(
+                    leader: leader,
+                    onCapture: saveLeader,
+                    onRefusal: { leaderProblem = $0 },
+                    onRecordingChange: { recording in
+                        if recording { leaderProblem = nil }
+                        model.setCapturingLeader(recording)
+                    }
+                )
             }
             if let leaderProblem { SettingsCaption(leaderProblem, color: .red) }
             if let problem = model.hotkey.problem { SettingsCaption(problem, color: .orange) }
 
-            SettingsRow(label: "Chord wait") {
-                Slider(value: $chordWait, in: 200...1000, step: 50) { editing in
-                    if !editing { model.saveSetting(SettingKey.chordWaitMs, String(Int(chordWait))) }
-                }
-                .frame(width: 220)
-                Text("\(Int(chordWait)) ms")
-                    .monospacedDigit()
-                    .frame(width: 64, alignment: .trailing)
+            SettingsSliderRow(
+                label: "Chord wait", value: $chordWait, range: 200...1000, step: 50,
+                readout: "\(Int(chordWait)) ms"
+            ) {
+                model.saveSetting(SettingKey.chordWaitMs, String(Int(chordWait)))
             }
             SettingsCaption("How long layout mode waits for another key when a chord could still grow.")
         }
         .disabled(settings == nil)
 
         SettingsCard(title: "Config") {
-            SettingsRow(label: "File") {
-                Text(model.paths.configFile.path).textSelection(.enabled).foregroundStyle(.secondary)
-            }
+            SettingsRow(label: "File") { SettingsValue(text: model.paths.configFile.path) }
             if model.paths.configIsSymlink {
-                SettingsRow(label: "Resolves to") {
-                    Text(model.paths.resolvedConfigFile.path).textSelection(.enabled).foregroundStyle(.secondary)
-                }
+                SettingsRow(label: "Resolves to") { SettingsValue(text: model.paths.resolvedConfigFile.path) }
             }
             SettingsRow(label: "Status") {
-                Text(configStatus).foregroundStyle(model.configStore.error == nil ? Color.secondary : Color.red)
+                SettingsValue(text: configStatus, color: model.configStore.error == nil ? .secondary : .red)
                 Button("Reload") { model.reloadConfig() }
             }
             if let error = model.configStore.error {
@@ -129,9 +138,12 @@ struct GeneralSettings: View {
         }
 
         SettingsCard(title: "Command line") {
-            SettingsRow(label: model.paths.binary.path) {
-                Text(model.cliVersion ?? (model.cli.isInstalled ? "unknown version" : "not installed"))
-                    .foregroundStyle(model.cli.isInstalled ? Color.secondary : Color.red)
+            SettingsRow(label: "Location") { SettingsValue(text: model.paths.binary.path) }
+            SettingsRow(label: "Version") {
+                SettingsValue(
+                    text: model.cliVersion ?? (model.cli.isInstalled ? "unknown version" : "not installed"),
+                    color: model.cli.isInstalled ? .secondary : .red
+                )
             }
         }
         .onAppear(perform: sync)
@@ -147,19 +159,14 @@ struct GeneralSettings: View {
     }
 
     private func sync() {
-        leaderText = settings?.leader ?? Settings.defaultLeader
         chordWait = Double(settings?.chordWaitMs ?? Settings.defaultChordWaitMs)
         launchAtLogin = LaunchAtLogin.isEnabled
     }
 
-    private func saveLeader() {
-        if let problem = KeyToken.leaderProblem(leaderText) {
-            leaderProblem = problem
-            return
-        }
+    private func saveLeader(_ token: KeyToken) {
         leaderProblem = nil
-        guard let canonical = KeyToken(leaderText)?.description, canonical != settings?.leader else { return }
-        model.saveSetting(SettingKey.leader, canonical)
+        guard token.description != settings?.leader else { return }
+        model.saveSetting(SettingKey.leader, token.description)
     }
 }
 
@@ -179,14 +186,11 @@ struct LayoutModeSettings: View {
             picker("Corner", key: SettingKey.labelCorner, value: settings?.label.corner, labels: [
                 .topLeft: "Top left", .topRight: "Top right", .bottomLeft: "Bottom left", .bottomRight: "Bottom right",
             ])
-            SettingsRow(label: "Show result for") {
-                Slider(value: $linger, in: 0...3000, step: 100) { editing in
-                    if !editing { model.saveSetting(SettingKey.labelLingerMs, String(Int(linger))) }
-                }
-                .frame(width: 220)
-                Text(linger == 0 ? "Off" : "\(Int(linger)) ms")
-                    .monospacedDigit()
-                    .frame(width: 64, alignment: .trailing)
+            SettingsSliderRow(
+                label: "Show result for", value: $linger, range: 0...3000, step: 100,
+                readout: linger == 0 ? "Off" : "\(Int(linger)) ms"
+            ) {
+                model.saveSetting(SettingKey.labelLingerMs, String(Int(linger)))
             }
             SettingsCaption("How long the label stays up after a chord runs, showing what it did.")
         }
@@ -223,7 +227,7 @@ struct LayoutModeSettings: View {
                 }
             }
             .labelsHidden()
-            .frame(width: 220)
+            .frame(width: SettingsMetrics.controlWidth, alignment: .trailing)
         }
     }
 }
@@ -308,19 +312,15 @@ struct AboutSettings: View {
 
     var body: some View {
         SettingsCard(title: "Trellis") {
-            SettingsRow(label: "Version") { Text(model.version).foregroundStyle(.secondary) }
+            SettingsRow(label: "Version") { SettingsValue(text: model.version) }
             SettingsRow(label: "Build") {
-                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")
-                    .foregroundStyle(.secondary)
+                SettingsValue(text: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")
             }
             SettingsRow(label: "Commit") {
-                Text(Bundle.main.object(forInfoDictionaryKey: "TrellisCommit") as? String ?? "development build")
-                    .foregroundStyle(.secondary)
+                SettingsValue(text: Bundle.main.object(forInfoDictionaryKey: "TrellisCommit") as? String ?? "development build")
             }
-            SettingsRow(label: "Signed by") { Text(CodeSigning.signer).foregroundStyle(.secondary) }
-            SettingsRow(label: "Socket") {
-                Text(model.paths.socket.path).textSelection(.enabled).foregroundStyle(.secondary)
-            }
+            SettingsRow(label: "Signed by") { SettingsValue(text: CodeSigning.signer) }
+            SettingsRow(label: "Socket") { SettingsValue(text: model.paths.socket.path) }
         }
     }
 }

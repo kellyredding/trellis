@@ -23,6 +23,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var settingsError: String?
     @Published private(set) var socketProblem: String?
     @Published private(set) var lastActionError: String?
+    @Published private(set) var isCapturingLeader = false
 
     init(paths: TrellisPaths = .current) {
         self.paths = paths
@@ -131,6 +132,19 @@ final class AppModel: ObservableObject {
                 Log.error("settings set \(key) failed: \(error.localizedDescription)")
             }
             await configStore.reload()
+        }
+    }
+
+    /// While the settings window records a new leader, the current one must
+    /// neither fire nor swallow the keystroke being recorded.
+    func setCapturingLeader(_ capturing: Bool) {
+        guard capturing != isCapturingLeader else { return }
+        isCapturingLeader = capturing
+        if capturing {
+            layoutMode.exit(reason: "recording a leader")
+            hotkey.suspend()
+        } else {
+            hotkey.resume()
         }
     }
 

@@ -7,6 +7,7 @@ import SwiftUI
 final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     private static var shared: PreferencesWindowController?
     private var escapeMonitor: Any?
+    private let model: AppModel
 
     static func show(model: AppModel) {
         if shared == nil { shared = PreferencesWindowController(model: model) }
@@ -24,6 +25,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         window.styleMask = [.titled, .closable]
         window.backgroundColor = .windowBackgroundColor
         window.title = "Settings"
+        self.model = model
         super.init(window: window)
         window.delegate = self
     }
@@ -33,11 +35,14 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// NSHostingView swallows Escape before the responder chain sees it.
+    /// NSHostingView swallows Escape before the responder chain sees it. While
+    /// the leader recorder is armed, Escape is its cancel key instead.
     private func watchForEscape() {
         guard escapeMonitor == nil else { return }
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.window?.isKeyWindow == true, event.keyCode == 53 else { return event }
+            guard let self, self.window?.isKeyWindow == true, event.keyCode == 53,
+                  !self.model.isCapturingLeader
+            else { return event }
             self.dismiss()
             return nil
         }

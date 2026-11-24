@@ -21,6 +21,19 @@ struct KeyModifiers: OptionSet, Hashable {
     ]
 }
 
+extension KeyModifiers {
+    /// From an `NSEvent.modifierFlags` raw value, keeping only the four a key
+    /// token names: caps lock, fn and the keypad flag would otherwise make the
+    /// same keystroke read differently from one press to the next.
+    init(deviceFlags raw: UInt) {
+        self = []
+        if raw & (1 << 18) != 0 { insert(.ctrl) }
+        if raw & (1 << 19) != 0 { insert(.alt) }
+        if raw & (1 << 17) != 0 { insert(.shift) }
+        if raw & (1 << 20) != 0 { insert(.cmd) }
+    }
+}
+
 /// Zero or more modifiers and one key, e.g. `ctrl+cmd+h`.
 struct KeyToken: Hashable, CustomStringConvertible {
     let modifiers: KeyModifiers

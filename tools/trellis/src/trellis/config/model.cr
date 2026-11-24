@@ -18,7 +18,7 @@ module Trellis
       chord_wait_ms : Int64 = 400_i64,
       label_screens : String = "all",
       label_corner : String = "bottom-right",
-      label_linger_ms : Int64 = 800_i64,
+      label_linger_ms : Int64 = 1500_i64,
       cheat_sheet : String = "off",
       dropdown_screens : String = "off"
 

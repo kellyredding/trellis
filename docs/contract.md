@@ -80,7 +80,7 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
     "label": {
       "screens": "all",
       "corner": "bottom-right",
-      "linger_ms": 800
+      "linger_ms": 1500
     },
     "cheat_sheet": "off",
     "dropdown": {
@@ -118,7 +118,7 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
 | `chord_wait_ms` | `400` | a whole number, `50`–`2000` |
 | `label.screens` | `all` | `all`, `main`, `target` |
 | `label.corner` | `bottom-right` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
-| `label.linger_ms` | `800` | a whole number, `0`–`3000`; `0` turns the confirmation off |
+| `label.linger_ms` | `1500` | a whole number, `0`–`3000`; `0` turns the confirmation off |
 | `cheat_sheet` | `off` | `off`, `label`, `dropdown` |
 | `dropdown.screens` | `off` | `off`, `all`, `main` |
 
@@ -183,7 +183,7 @@ canonical chord.
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 400,
-    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 800 },
+    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 1500 },
     "cheat_sheet": "off",
     "dropdown": { "screens": "off" }
   },

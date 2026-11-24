@@ -77,6 +77,27 @@ check("the keypad enter is return", KeyCodes.token(keyCode: 76, modifiers: [])?.
 check("key codes carry modifiers",
       KeyCodes.token(keyCode: 4, modifiers: [.cmd, .ctrl])?.description == "ctrl+cmd+h")
 
+// MARK: - Leader capture
+
+check("device flags keep ctrl and alt", KeyModifiers(deviceFlags: (1 << 18) | (1 << 19)) == [.ctrl, .alt])
+check("device flags keep shift and cmd", KeyModifiers(deviceFlags: (1 << 17) | (1 << 20)) == [.shift, .cmd])
+check("caps lock, keypad and fn are dropped", KeyModifiers(deviceFlags: (1 << 16) | (1 << 21) | (1 << 23)).isEmpty)
+let capturedLeader = LeaderCapture.interpret(keyCode: 1, modifiers: [.ctrl, .alt])
+check("⌃⌥S captures as ctrl+alt+s", capturedLeader == .capture(token("ctrl+alt+s")))
+if case .capture(let leader) = capturedLeader {
+    check("a captured leader displays as ⌃⌥S", leader.display(uppercased: true) == "⌃⌥S")
+}
+check("a bare escape cancels", LeaderCapture.interpret(keyCode: 53, modifiers: []) == .cancel)
+check("a key with no modifier is refused",
+      LeaderCapture.interpret(keyCode: 1, modifiers: []) == .refuse("the leader needs at least one modifier"))
+check("shift alone is a modifier", LeaderCapture.interpret(keyCode: 1, modifiers: [.shift]) == .capture(token("shift+s")))
+check("a modified escape is refused", {
+    if case .refuse = LeaderCapture.interpret(keyCode: 53, modifiers: [.ctrl]) { return true }; return false
+}())
+check("a key outside the key names is refused", {
+    if case .refuse = LeaderCapture.interpret(keyCode: 105, modifiers: [.ctrl]) { return true }; return false
+}())
+
 // MARK: - Config export (fixtures/export.json)
 
 let fixturePath = CommandLine.arguments.dropFirst().first
@@ -98,7 +119,8 @@ if let config = fixture {
     check("chord_wait_ms", config.settings.chordWaitMs == 350)
     check("label screens", config.settings.label.screens == .main)
     check("label corner", config.settings.label.corner == .bottomRight)
-    check("label linger_ms takes the default", config.settings.label.lingerMs == 800)
+    check("label linger_ms takes the default", config.settings.label.lingerMs == Settings.defaultLingerMs)
+    check("the linger default is 1500 ms", Settings.defaultLingerMs == 1500)
     check("cheat_sheet", config.settings.cheatSheet == .off)
     check("dropdown screens", config.settings.dropdown.screens == .off)
     check("two regions", config.regions.count == 2)

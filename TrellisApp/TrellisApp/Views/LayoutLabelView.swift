@@ -6,6 +6,9 @@ struct LayoutLabelView: View {
     @ObservedObject var layoutMode: LayoutMode
     @ObservedObject var configStore: ConfigStore
 
+    /// The chord and key text in the label and the chord confirmation.
+    static let keysFont = Font.system(size: 20, weight: .medium, design: .monospaced)
+
     private var showsCheatSheet: Bool { configStore.config?.settings.cheatSheet == .label }
 
     static func leader(_ config: TrellisConfig?) -> String {
@@ -29,7 +32,7 @@ struct LayoutLabelView: View {
                         .foregroundStyle(.white.opacity(0.55))
                 }
             }
-            .font(.system(size: 20, weight: .medium, design: .rounded))
+            .font(Self.keysFont)
 
             if showsCheatSheet, let bindings = configStore.config?.bindings, !bindings.isEmpty {
                 Divider().overlay(Color.white.opacity(0.25))
@@ -71,7 +74,7 @@ struct ChordConfirmationView: View {
                         .foregroundStyle(.orange)
                 }
             }
-            .font(.system(size: 20, weight: .medium, design: .rounded))
+            .font(LayoutLabelView.keysFont)
             .labelChrome()
         }
     }

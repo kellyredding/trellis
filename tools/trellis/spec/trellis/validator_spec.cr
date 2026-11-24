@@ -13,7 +13,7 @@ describe Trellis::Config::Validator do
     model.settings.should eq(Trellis::Config::Settings.new)
     model.settings.leader.should eq("ctrl+s")
     model.settings.chord_wait_ms.should eq(400)
-    model.settings.label_linger_ms.should eq(800)
+    model.settings.label_linger_ms.should eq(1500)
     model.bindings.should be_empty
   end
 
