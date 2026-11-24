@@ -20,6 +20,11 @@ final class LayoutMode: ObservableObject {
     private var timer: Timer?
     private var lastLeaderExit: TimeInterval = 0
     private var observers: [NSObjectProtocol] = []
+    /// Key codes whose key-down the tap swallowed; only their key-ups are
+    /// swallowed too. Swallowing the leader's key-up (its key-down went to the
+    /// Carbon hot key, not the tap) left the hot key believing it was still
+    /// held, so the next leader press after Esc was ignored.
+    private var swallowedDowns: Set<UInt16> = []
 
     /// Closes the mode when the session goes away (user switch, display
     /// sleep, screen lock), so the tap never swallows keys on return.
@@ -76,6 +81,7 @@ final class LayoutMode: ObservableObject {
             clock: { ProcessInfo.processInfo.systemUptime }
         )
         self.leader = leader
+        swallowedDowns = []
         typed = []
         missed = nil
         isActive = true
@@ -129,11 +135,13 @@ final class LayoutMode: ObservableObject {
             if let tap, isActive { CGEvent.tapEnable(tap: tap, enable: true) }
             return Unmanaged.passUnretained(event)
         case .keyUp:
-            return isActive ? nil : Unmanaged.passUnretained(event)
+            let keyCode = UInt16(truncatingIfNeeded: event.getIntegerValueField(.keyboardEventKeycode))
+            return swallowedDowns.remove(keyCode) != nil ? nil : Unmanaged.passUnretained(event)
         case .keyDown:
             guard isActive else { return Unmanaged.passUnretained(event) }
-            if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 { return nil }
             let keyCode = UInt16(truncatingIfNeeded: event.getIntegerValueField(.keyboardEventKeycode))
+            swallowedDowns.insert(keyCode)
+            if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 { return nil }
             guard let token = KeyCodes.token(keyCode: keyCode, modifiers: Self.modifiers(event.flags)) else {
                 return nil
             }
