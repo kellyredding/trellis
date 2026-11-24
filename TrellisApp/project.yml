@@ -1,0 +1,50 @@
+name: TrellisApp
+options:
+  bundleIdPrefix: com.kellyredding
+  deploymentTarget:
+    macOS: "14.0"
+
+targets:
+  Trellis:
+    type: application
+    platform: macOS
+    sources:
+      - TrellisApp
+    info:
+      path: TrellisApp/Info.plist
+      properties:
+        CFBundleName: Trellis
+        CFBundleDisplayName: Trellis
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundlePackageType: APPL
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHighResolutionCapable: true
+        # Not LSUIElement: that key hides the app from Launch Services too.
+        # The delegate sets the .accessory activation policy at launch instead.
+    settings:
+      base:
+        PRODUCT_NAME: Trellis
+        EXECUTABLE_NAME: Trellis
+        PRODUCT_BUNDLE_IDENTIFIER: com.kellyredding.Trellis
+        # MARKETING_VERSION comes from the repository's VERSION via the Makefile.
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.10"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Not sandboxed: the app runs the trellis CLI, listens on a socket under
+        # ~/.trellis, and drives other apps' windows through Accessibility.
+        ENABLE_APP_SANDBOX: NO
+
+  # Compiles Models/ and nothing else, so everything there must stay
+  # Foundation-only.
+  TrellisSmoke:
+    type: tool
+    platform: macOS
+    sources:
+      - TrellisApp/Models
+      - TrellisSmoke
+    settings:
+      base:
+        SWIFT_VERSION: "5.10"
