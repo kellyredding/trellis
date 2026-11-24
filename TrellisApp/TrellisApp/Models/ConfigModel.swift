@@ -46,6 +46,13 @@ struct Settings: Decodable, Equatable {
     struct Label: Decodable, Equatable {
         let screens: LabelScreens
         let corner: Corner
+        let lingerMs: Int
+
+        enum CodingKeys: String, CodingKey {
+            case screens
+            case corner
+            case lingerMs = "linger_ms"
+        }
     }
 
     struct Dropdown: Decodable, Equatable {
@@ -68,6 +75,7 @@ struct Settings: Decodable, Equatable {
 
     static let defaultLeader = "ctrl+s"
     static let defaultChordWaitMs = 400
+    static let defaultLingerMs = 800
 
     var leaderToken: KeyToken? { KeyToken(leader) }
 }

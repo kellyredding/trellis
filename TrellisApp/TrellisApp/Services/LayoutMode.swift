@@ -11,7 +11,7 @@ final class LayoutMode: ObservableObject {
     /// The last chord that named no binding, shown until the next key.
     @Published private(set) var missed: [KeyToken]?
 
-    var onRun: ((BindingTarget) -> Void)?
+    var onRun: ((ResolverBinding) -> Void)?
 
     private var resolver: ChordResolver?
     private var leader: KeyToken?
@@ -186,7 +186,7 @@ final class LayoutMode: ObservableObject {
             self.timer = timer
         case .run(let binding):
             exit(reason: "ran \(KeyToken.chordDescription(binding.chord))")
-            onRun?(binding.target)
+            onRun?(binding)
         case .unrecognized(let keys):
             typed = []
             missed = keys

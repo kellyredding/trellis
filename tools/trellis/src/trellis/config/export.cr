@@ -42,6 +42,7 @@ module Trellis
             json.object do
               json.field "screens", settings.label_screens
               json.field "corner", settings.label_corner
+              json.field "linger_ms", settings.label_linger_ms
             end
           end
           json.field "cheat_sheet", settings.cheat_sheet

@@ -79,7 +79,8 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
     "chord_wait_ms": 400,
     "label": {
       "screens": "all",
-      "corner": "bottom-right"
+      "corner": "bottom-right",
+      "linger_ms": 800
     },
     "cheat_sheet": "off",
     "dropdown": {
@@ -117,8 +118,18 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
 | `chord_wait_ms` | `400` | a whole number, `50`–`2000` |
 | `label.screens` | `all` | `all`, `main`, `target` |
 | `label.corner` | `bottom-right` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
+| `label.linger_ms` | `800` | a whole number, `0`–`3000`; `0` turns the confirmation off |
 | `cheat_sheet` | `off` | `off`, `label`, `dropdown` |
 | `dropdown.screens` | `off` | `off`, `all`, `main` |
+
+After a chord typed in layout mode runs, the label stays up for
+`label.linger_ms` on the same screens and in the same corner, showing the
+chord, what it ran and how that went: `⌃S  h → left-half ✓`, or the window
+action's error (`h → left-half: no window is focused`). It is display only:
+layout mode has already closed and captures nothing, the leader replaces it at
+once with the layout-mode label, and a newer confirmation replaces an older
+one and restarts the timer. The socket's `place`, `screen.move` and `chord`
+events never show it.
 
 A region's `margins` are fractions of the visible frame, per edge (`top`,
 `right`, `bottom`, `left`); its `gap` is a number, or `{"x": 0.005, "y":
@@ -172,7 +183,7 @@ canonical chord.
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 400,
-    "label": { "screens": "all", "corner": "bottom-right" },
+    "label": { "screens": "all", "corner": "bottom-right", "linger_ms": 800 },
     "cheat_sheet": "off",
     "dropdown": { "screens": "off" }
   },

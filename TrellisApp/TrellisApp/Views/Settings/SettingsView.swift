@@ -43,6 +43,7 @@ enum SettingKey {
     static let chordWaitMs = "chord_wait_ms"
     static let labelScreens = "label.screens"
     static let labelCorner = "label.corner"
+    static let labelLingerMs = "label.linger_ms"
     static let cheatSheet = "cheat_sheet"
     static let dropdownScreens = "dropdown.screens"
 }
@@ -166,6 +167,7 @@ struct GeneralSettings: View {
 
 struct LayoutModeSettings: View {
     @ObservedObject var model: AppModel
+    @State private var linger: Double = Double(Settings.defaultLingerMs)
 
     private var settings: Settings? { model.configStore.config?.settings }
 
@@ -177,8 +179,20 @@ struct LayoutModeSettings: View {
             picker("Corner", key: SettingKey.labelCorner, value: settings?.label.corner, labels: [
                 .topLeft: "Top left", .topRight: "Top right", .bottomLeft: "Bottom left", .bottomRight: "Bottom right",
             ])
+            SettingsRow(label: "Show result for") {
+                Slider(value: $linger, in: 0...3000, step: 100) { editing in
+                    if !editing { model.saveSetting(SettingKey.labelLingerMs, String(Int(linger))) }
+                }
+                .frame(width: 220)
+                Text(linger == 0 ? "Off" : "\(Int(linger)) ms")
+                    .monospacedDigit()
+                    .frame(width: 64, alignment: .trailing)
+            }
+            SettingsCaption("How long the label stays up after a chord runs, showing what it did.")
         }
         .disabled(settings == nil)
+        .onAppear(perform: sync)
+        .onChange(of: model.configStore.config) { _, _ in sync() }
 
         SettingsCard(title: "Cheat sheet") {
             picker("Show bindings", key: SettingKey.cheatSheet, value: settings?.cheatSheet, labels: [
@@ -190,6 +204,10 @@ struct LayoutModeSettings: View {
             SettingsCaption("The dropdown under the menu-bar icon is not built yet; these settings are saved for it.")
         }
         .disabled(settings == nil)
+    }
+
+    private func sync() {
+        linger = Double(settings?.label.lingerMs ?? Settings.defaultLingerMs)
     }
 
     private func picker<Value: RawRepresentable & CaseIterable & Hashable>(

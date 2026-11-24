@@ -6,17 +6,17 @@ struct LayoutLabelView: View {
     @ObservedObject var layoutMode: LayoutMode
     @ObservedObject var configStore: ConfigStore
 
-    private var leader: String {
-        let text = configStore.config?.settings.leader ?? Settings.defaultLeader
+    private var showsCheatSheet: Bool { configStore.config?.settings.cheatSheet == .label }
+
+    static func leader(_ config: TrellisConfig?) -> String {
+        let text = config?.settings.leader ?? Settings.defaultLeader
         return KeyToken(text)?.display(uppercased: true) ?? text
     }
-
-    private var showsCheatSheet: Bool { configStore.config?.settings.cheatSheet == .label }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text(leader)
+                Text(Self.leader(configStore.config))
                 if !layoutMode.typed.isEmpty {
                     Text("  " + KeyToken.chordDisplay(layoutMode.typed))
                 }
@@ -46,13 +46,46 @@ struct LayoutLabelView: View {
                 }
             }
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.black.opacity(0.78))
-        )
-        .fixedSize()
+        .labelChrome()
+    }
+}
+
+/// `⌃S  h → left-half ✓`, or the error when the window action failed.
+struct ChordConfirmationView: View {
+    @ObservedObject var state: ChordConfirmationState
+    @ObservedObject var configStore: ConfigStore
+
+    var body: some View {
+        if let confirmation = state.current {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text(LayoutLabelView.leader(configStore.config))
+                Text("  " + confirmation.ran)
+                switch confirmation.outcome {
+                case .running:
+                    EmptyView()
+                case .succeeded:
+                    Text(confirmation.result).foregroundStyle(.green)
+                case .failed:
+                    Text(confirmation.result)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .font(.system(size: 20, weight: .medium, design: .rounded))
+            .labelChrome()
+        }
+    }
+}
+
+private extension View {
+    func labelChrome() -> some View {
+        foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.black.opacity(0.78))
+            )
+            .fixedSize()
     }
 }

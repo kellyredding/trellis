@@ -98,6 +98,7 @@ if let config = fixture {
     check("chord_wait_ms", config.settings.chordWaitMs == 350)
     check("label screens", config.settings.label.screens == .main)
     check("label corner", config.settings.label.corner == .bottomRight)
+    check("label linger_ms takes the default", config.settings.label.lingerMs == 800)
     check("cheat_sheet", config.settings.cheatSheet == .off)
     check("dropdown screens", config.settings.dropdown.screens == .off)
     check("two regions", config.regions.count == 2)
@@ -124,7 +125,7 @@ func decodes(_ json: String) -> Bool { (try? TrellisConfig.decode(Data(json.utf8
 
 let minimal = """
 {"version":1,"source":"starter","path":"x","settings":{"leader":"ctrl+s","chord_wait_ms":400,
-"label":{"screens":"all","corner":"top-left"},"cheat_sheet":"label","dropdown":{"screens":"all"}},
+"label":{"screens":"all","corner":"top-left","linger_ms":0},"cheat_sheet":"label","dropdown":{"screens":"all"}},
 "regions":{},"placements":{},"bindings":[BINDING],"warnings":[]}
 """
 check("a minimal export decodes",
@@ -305,6 +306,16 @@ if let config = fixture {
           fixtureResolver.feed(KeyCodes.token(keyCode: 4, modifiers: [.ctrl, .cmd])!) == .run(config.resolverBindings[0]))
     if case .waiting = fixtureResolver.feed(token("l")) { check("fixture: l waits", true) } else { check("fixture: l waits", false) }
 }
+
+// MARK: - Chord confirmation
+
+var confirmation = ChordConfirmation(chord: chord("h"), target: .placement("left-half"))
+check("a running confirmation shows the chord and its target", confirmation.ran == "h → left-half" && confirmation.result.isEmpty)
+confirmation.outcome = .succeeded
+check("a succeeded confirmation is ticked", confirmation.result == " ✓")
+let failedMove = ChordConfirmation(chord: chord("ctrl+l l"), target: .action(.screenEast), outcome: .failed("no window is focused"))
+check("a failed confirmation shows the error",
+      failedMove.ran == "⌃l l → screen-east" && failedMove.result == ": no window is focused")
 
 // MARK: - Target matching
 

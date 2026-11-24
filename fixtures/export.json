@@ -5,7 +5,7 @@
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 350,
-    "label": { "screens": "main", "corner": "bottom-right" },
+    "label": { "screens": "main", "corner": "bottom-right", "linger_ms": 800 },
     "cheat_sheet": "off",
     "dropdown": { "screens": "off" }
   },

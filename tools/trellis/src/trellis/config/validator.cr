@@ -19,6 +19,7 @@ module Trellis
       LABEL_CORNERS    = ["top-left", "top-right", "bottom-left", "bottom-right"]
       CHEAT_SHEETS     = ["off", "label", "dropdown"]
       DROPDOWN_SCREENS = ["off", "all", "main"]
+      LINGER_MS        = 0_i64..3000_i64
 
       def self.validate(tree : JSON::Any, source : Source, path : Path) : Result
         new(tree, source, path).run
@@ -119,7 +120,18 @@ module Trellis
         end
 
         label = object(tree["label"]?, "settings.label") || {} of String => JSON::Any
-        allowed_keys("settings.label", label, ["screens", "corner"])
+        allowed_keys("settings.label", label, ["screens", "corner", "linger_ms"])
+
+        linger = defaults.label_linger_ms
+        if raw = label["linger_ms"]?
+          int = raw.as_i64?
+          if int && LINGER_MS.includes?(int)
+            linger = int
+          else
+            error("settings.label.linger_ms: must be a whole number from 0 to 3000, got #{show(raw)}")
+          end
+        end
+
         dropdown = object(tree["dropdown"]?, "settings.dropdown") || {} of String => JSON::Any
         allowed_keys("settings.dropdown", dropdown, ["screens"])
 
@@ -128,6 +140,7 @@ module Trellis
           chord_wait_ms: wait,
           label_screens: choice("settings.label.screens", label["screens"]?, LABEL_SCREENS, defaults.label_screens),
           label_corner: choice("settings.label.corner", label["corner"]?, LABEL_CORNERS, defaults.label_corner),
+          label_linger_ms: linger,
           cheat_sheet: choice("settings.cheat_sheet", tree["cheat_sheet"]?, CHEAT_SHEETS, defaults.cheat_sheet),
           dropdown_screens: choice("settings.dropdown.screens", dropdown["screens"]?, DROPDOWN_SCREENS, defaults.dropdown_screens),
         )

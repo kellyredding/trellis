@@ -5,7 +5,7 @@ module Trellis
     module SettingsCommand
       extend self
 
-      KEYS = ["leader", "chord_wait_ms", "label.screens", "label.corner", "cheat_sheet", "dropdown.screens"]
+      KEYS = ["leader", "chord_wait_ms", "label.screens", "label.corner", "label.linger_ms", "cheat_sheet", "dropdown.screens"]
 
       HELP = <<-TEXT
         trellis settings list | get KEY | set KEY VALUE
@@ -17,6 +17,8 @@ module Trellis
                              50 to 2000 (default 400)
           label.screens      Where the layout-mode label shows: all, main, target
           label.corner       top-left, top-right, bottom-left, bottom-right
+          label.linger_ms    How long the label shows a typed chord's result,
+                             0 (off) to 3000 (default 800)
           cheat_sheet        off, label, dropdown
           dropdown.screens   off, all, main
 
@@ -38,12 +40,13 @@ module Trellis
 
       def value(settings : Config::Settings, key : String) : String | Int64
         case key
-        when "leader"        then settings.leader
-        when "chord_wait_ms" then settings.chord_wait_ms
-        when "label.screens" then settings.label_screens
-        when "label.corner"  then settings.label_corner
-        when "cheat_sheet"   then settings.cheat_sheet
-        else                      settings.dropdown_screens
+        when "leader"          then settings.leader
+        when "chord_wait_ms"   then settings.chord_wait_ms
+        when "label.screens"   then settings.label_screens
+        when "label.corner"    then settings.label_corner
+        when "label.linger_ms" then settings.label_linger_ms
+        when "cheat_sheet"     then settings.cheat_sheet
+        else                        settings.dropdown_screens
         end
       end
 
@@ -89,6 +92,12 @@ module Trellis
         typed = case key
                 when "chord_wait_ms"
                   JSON::Any.new(raw.to_i64? || raise Error.new("chord_wait_ms must be a whole number, got #{raw.inspect}"))
+                when "label.linger_ms"
+                  linger = raw.to_i64?
+                  unless linger && Config::Validator::LINGER_MS.includes?(linger)
+                    raise UsageError.new("label.linger_ms must be a whole number from 0 to 3000, got #{raw.inspect}")
+                  end
+                  JSON::Any.new(linger)
                 when "leader"
                   JSON::Any.new(Keys.canonical_token(raw))
                 else

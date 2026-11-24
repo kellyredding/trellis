@@ -13,6 +13,7 @@ describe Trellis::Config::Validator do
     model.settings.should eq(Trellis::Config::Settings.new)
     model.settings.leader.should eq("ctrl+s")
     model.settings.chord_wait_ms.should eq(400)
+    model.settings.label_linger_ms.should eq(800)
     model.bindings.should be_empty
   end
 
@@ -34,6 +35,15 @@ describe Trellis::Config::Validator do
       SpecHelper.errors(%({"settings": {"chord_wait_ms": 400.5}})).first.should contain("whole number")
       SpecHelper.errors(%({"settings": {"chord_wait_ms": 50}})).should be_empty
       SpecHelper.errors(%({"settings": {"chord_wait_ms": 2000}})).should be_empty
+    end
+
+    it "range-checks label.linger_ms, with 0 turning it off" do
+      SpecHelper.errors(%({"settings": {"label": {"linger_ms": -1}}})).first.should contain("0 to 3000")
+      SpecHelper.errors(%({"settings": {"label": {"linger_ms": 3001}}})).first.should contain("0 to 3000")
+      SpecHelper.errors(%({"settings": {"label": {"linger_ms": 800.5}}})).first.should contain("whole number")
+      SpecHelper.errors(%({"settings": {"label": {"linger_ms": "800"}}})).first.should contain("settings.label.linger_ms")
+      SpecHelper.validate(%({"settings": {"label": {"linger_ms": 0}}})).model!.settings.label_linger_ms.should eq(0)
+      SpecHelper.validate(%({"settings": {"label": {"linger_ms": 3000}}})).model!.settings.label_linger_ms.should eq(3000)
     end
 
     it "checks each enumeration" do

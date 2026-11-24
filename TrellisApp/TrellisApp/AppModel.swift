@@ -93,7 +93,7 @@ final class AppModel: ObservableObject {
 
         hotkey.onPress = { [weak self] in self?.leaderPressed() }
         hotkey.register(leader)
-        layoutMode.onRun = { [weak self] target in self?.run(target) }
+        layoutMode.onRun = { [weak self] binding in self?.run(binding) }
         layoutMode.start()
 
         screens.start { [weak self] in self?.overlay.refresh() }
@@ -169,17 +169,23 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func run(_ target: BindingTarget) {
+    /// A chord typed in layout mode; the socket's `chord` event runs through
+    /// `RequestHandler` and shows no confirmation.
+    private func run(_ binding: ResolverBinding) {
         guard let config = configStore.config else { return }
+        let target = binding.target
+        let confirmation = overlay.beginConfirmation(ChordConfirmation(chord: binding.chord, target: target))
         Task {
             let result = await actions.run { self.actions.perform(target, config: config) }
             switch result {
             case .success(let window):
                 lastActionError = nil
                 Log.info("\(target) → \(window.app) \(window.frame)")
+                overlay.finishConfirmation(confirmation, .succeeded)
             case .failure(let error):
                 lastActionError = error.message
                 Log.error("\(target) failed: \(error.message)")
+                overlay.finishConfirmation(confirmation, .failed(error.message))
                 NSSound.beep()
             }
         }
