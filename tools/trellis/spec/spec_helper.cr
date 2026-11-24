@@ -29,7 +29,7 @@ module SpecHelper
     end
 
     def config : Path
-      @root / "config.yml"
+      @root / "config.json"
     end
 
     def write_config(body : String) : Nil
@@ -146,12 +146,12 @@ module SpecHelper
     end
   end
 
-  def validate(yaml : String) : Trellis::Config::Result
-    tree = Trellis::Config::YamlTree.parse(yaml)
-    Trellis::Config::Validator.validate(tree, Trellis::Config::Source::File, Path.new("config.yml"))
+  def validate(json : String) : Trellis::Config::Result
+    tree = Trellis::Config::Reader.parse(json)
+    Trellis::Config::Validator.validate(tree, Trellis::Config::Source::File, Path.new("config.json"))
   end
 
-  def errors(yaml : String) : Array(String)
-    validate(yaml).errors
+  def errors(json : String) : Array(String)
+    validate(json).errors
   end
 end

@@ -11,7 +11,7 @@ sequence of keys typed within a short wait; each key restarts the wait, so
 Layouts are data, not code. A placement is a rect in fractions of the
 screen's visible frame, optionally inside a named region that keeps margins
 clear and leaves gaps between neighbouring windows. Bindings map chords to
-placements. All of it lives in one YAML file that the `trellis` CLI reads,
+placements. All of it lives in one JSON file that the `trellis` CLI reads,
 validates and edits, so an agent can list your windows, try a shape on one,
 and add the binding you liked.
 
@@ -49,15 +49,26 @@ trellis bind c centred               # ⌃S c now centres the focused window
 trellis resolve "l l"                # what a chord does, and whether it waits
 ```
 
-Every command takes `--json`. Config edits rewrite the YAML file, so comments
-in it do not survive a CLI edit.
+Every command takes `--json`.
 
 ## Config
 
-`~/.trellis/config.yml`, or `TRELLIS_CONFIG`. It may be a symlink — for
+`~/.trellis/config.json`, or `TRELLIS_CONFIG`. It may be a symlink — for
 example into a private dotfiles repository — and edits replace the file it
 points to, never the link. Without a config file Trellis uses
-`config/starter.yml`; `trellis config init --starter` writes it out to edit.
+`config/starter.json`; `trellis config init --starter` writes it out to edit.
+
+Press ⌃S for layout mode, then a chord. Each placement's `rect` is
+`[x, y, width, height]` in fractions of the screen's visible frame (below the
+menu bar, beside the Dock), so `"rect": [0, 0, 0.5, 1]` is the left half.
+Bindings map a chord to a placement, or to `screen-east` / `screen-west` to
+move the window to the next display. The starter binds `h` `l` `k` `j` to the
+halves, `i` `o` `,` `.` to the quarters, `ctrl+h` / `ctrl+l` to 60/40,
+`cmd+h` / `cmd+l` to 40/60, `return` to the whole screen, and the arrow keys
+to the next display.
+
+The file is strict JSON. Edit it with the CLI, or by hand followed by
+`trellis config validate`; `docs/contract.md` has every key.
 
 ## Development
 

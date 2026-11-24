@@ -18,8 +18,7 @@ module Trellis
         frame (below the menu bar, beside the Dock), or of a region's area.
         Names use lowercase letters, digits and hyphens.
 
-        Changes rewrite the config file, dropping its comments (see
-        `trellis config --help`).
+        Changes rewrite the config file (see `trellis config --help`).
         TEXT
 
       def run(argv : Array(String)) : Int32

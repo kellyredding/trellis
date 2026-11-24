@@ -1,5 +1,4 @@
 require "json"
-require "yaml"
 require "socket"
 
 # Explicit and first: the glob below loads alphabetically, and every error
@@ -8,8 +7,8 @@ require "./trellis/error"
 require "./trellis/**"
 
 module Trellis
-  VERSION      = {{ read_file("#{__DIR__}/../../../VERSION").strip }}
-  STARTER_YAML = {{ read_file("#{__DIR__}/../../../config/starter.yml") }}
+  VERSION        = {{ read_file("#{__DIR__}/../../../VERSION").strip }}
+  STARTER_CONFIG = {{ read_file("#{__DIR__}/../../../config/starter.json") }}
 end
 
 # Specs require this file to reach the library without running the program;

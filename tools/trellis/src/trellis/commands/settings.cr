@@ -20,8 +20,8 @@ module Trellis
           cheat_sheet        off, label, dropdown
           dropdown.screens   off, all, main
 
-        set validates the whole config and rewrites the file, dropping its
-        comments (see `trellis config --help`).
+        set validates the whole config and rewrites the file (see
+        `trellis config --help`).
         TEXT
 
       def run(argv : Array(String)) : Int32

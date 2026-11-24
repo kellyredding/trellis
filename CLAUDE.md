@@ -40,7 +40,7 @@ make app-check   # app: build + smoke
   resolution, key parsing and the config decoding are checked without a
   window server. Anything needing AppKit, Carbon or the Accessibility API
   belongs in `Services/` or `Views/`.
-- `fixtures/config.yml` and `fixtures/export.json` pin the config export for
+- `fixtures/config.json` and `fixtures/export.json` pin the config export for
   both sides. Never edit them to make one side's check pass.
 
 ## Signing and the Accessibility permission
@@ -59,4 +59,4 @@ working with no error.
   override (`TRELLIS_ROOT`, `TRELLIS_CONFIG`, `TRELLIS_RUNTIME_DIR`,
   `TRELLIS_SOCKET`, `TRELLIS_BINARY`).
 - Commit anyone's personal layouts. The repository ships only
-  `config/starter.yml`; personal configs live outside it.
+  `config/starter.json`; personal configs live outside it.

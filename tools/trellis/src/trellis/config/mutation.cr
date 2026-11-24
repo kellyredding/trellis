@@ -8,7 +8,6 @@ module Trellis
         path : Path,
         written : Path,
         model : Model,
-        warnings : Array(String),
         reload : SocketClient::ReloadOutcome
 
       getter root : Hash(String, JSON::Any)
@@ -24,16 +23,16 @@ module Trellis
         if tree.raw.nil?
           @root = {} of String => JSON::Any
         else
-          @root = tree.as_h? || raise InvalidConfig.new("the config is invalid", ["the config: must be a mapping"])
+          @root = tree.as_h? || raise InvalidConfig.new("the config is invalid", ["the config: must be an object"])
         end
       end
 
-      # The named section's mapping, created in canonical position if absent.
+      # The named section's object, created in canonical position if absent.
       def section(name : String) : Hash(String, JSON::Any)
         existing = @root[name]?
         if existing && !existing.raw.nil?
           return existing.as_h? || raise InvalidConfig.new(
-            "the config is invalid", ["#{name}: must be a mapping"])
+            "the config is invalid", ["#{name}: must be an object"])
         end
 
         hash = {} of String => JSON::Any
@@ -51,15 +50,9 @@ module Trellis
           raise InvalidConfig.new("refused: the change would leave the config invalid; nothing was written", result.errors)
         end
 
-        warnings = [] of String
-        if @loaded.source.file? && Store.comments?(@loaded.text)
-          warnings << "warning: rewriting #{@loaded.path} drops its comments; edit the file " \
-                      "directly to keep them, then `trellis config validate`"
-        end
-
         written = Writer.write(@loaded.path, Emitter.emit(@root))
         model = result.model!
-        Outcome.new(@loaded.path, written, model.copy_with(source: Source::File), warnings, SocketClient.reload_quietly)
+        Outcome.new(@loaded.path, written, model.copy_with(source: Source::File), SocketClient.reload_quietly)
       end
 
       # Replaces a key in place, keeping its position.

@@ -15,7 +15,7 @@ make install # check, build, copy to ~/.trellis/bin/trellis, link onto ~/.local/
 ```
 
 The version comes from the repository's `VERSION` file and the starter
-config from `config/starter.yml`, both read at compile time.
+config from `config/starter.json`, both read at compile time.
 
 ## Commands
 
@@ -47,14 +47,15 @@ Run `trellis <command> --help` for each command's options.
 | 4 | Accessibility permission not granted |
 | 5 | Window or screen target not found, or ambiguous |
 
-## Config changes drop comments
+## Config changes
 
-Commands that change the config load it (the built-in starter when no file
-exists), apply the change, validate the whole result, and refuse an invalid
-one without writing anything. A valid result is written back as YAML: key
-order is kept, **comments are not**. When the file had comments, the command
-says so on stderr (and in `warnings` with `--json`). To keep comments, edit
-the file by hand and run `trellis config validate`.
+The config is a JSON file. Commands that change it load it (the built-in
+starter when no file exists), apply the change, validate the whole result,
+and refuse an invalid one without writing anything. A valid result is
+written back as JSON: two-space indent, the sections in canonical order
+(`version`, `settings`, `regions`, `placements`, `bindings`), every other key
+in its existing order. After editing the file by hand, run
+`trellis config validate`.
 
 Writes are symlink-safe: when the config path is a symlink, the file it
 points to is replaced (temp file beside it, then a rename), and the link
@@ -68,7 +69,7 @@ picks the change up at launch.
 | Path | Default | Override |
 |---|---|---|
 | Root | `~/.trellis` | `TRELLIS_ROOT` |
-| Config | `<root>/config.yml` | `TRELLIS_CONFIG` |
+| Config | `<root>/config.json` | `TRELLIS_CONFIG` |
 | Runtime dir | `<root>/runtime` | `TRELLIS_RUNTIME_DIR` |
 | Socket | `<runtime>/trellis.sock` | `TRELLIS_SOCKET` |
 

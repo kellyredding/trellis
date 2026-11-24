@@ -18,8 +18,7 @@ module Trellis
         A chord that also starts a longer one waits (chord_wait_ms) before it
         runs; `trellis resolve CHORD` says whether one does.
 
-        bind and unbind rewrite the config file, dropping its comments (see
-        `trellis config --help`).
+        bind and unbind rewrite the config file (see `trellis config --help`).
         TEXT
 
       def run(command : String, argv : Array(String)) : Int32

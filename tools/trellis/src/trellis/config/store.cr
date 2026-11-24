@@ -4,7 +4,7 @@ module Trellis
     # embedded starter when there is none.
     record Loaded, path : Path, source : Source, text : String do
       def tree : JSON::Any
-        YamlTree.parse(text)
+        Reader.parse(text)
       end
 
       def validate : Result
@@ -29,19 +29,12 @@ module Trellis
         elsif File.symlink?(path.to_s)
           raise Error.new("#{path} is a symlink to #{Writer.resolve(path)}, which does not exist")
         else
-          Loaded.new(path, Source::Starter, STARTER_YAML)
+          Loaded.new(path, Source::Starter, STARTER_CONFIG)
         end
       end
 
       def model(path : Path = Paths.config_file) : Model
         load(path).model
-      end
-
-      # Conservative on purpose: any `#` at the start of a line or after
-      # whitespace counts, even inside a quoted scalar. A false alarm costs a
-      # warning; a miss costs someone their comments.
-      def comments?(text : String) : Bool
-        text.each_line.any? { |line| line.matches?(/(\A|\s)#/) }
       end
     end
   end

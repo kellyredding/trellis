@@ -10,7 +10,7 @@ module Trellis
 
         Actions:
           path                     The configured path (and where its symlink resolves)
-          show                     The config as YAML (the built-in starter when no file exists)
+          show                     The config file's JSON (the built-in starter when no file exists)
           validate                 Check it: errors exit 1; prefix chords are warnings
           export --json            The normalized config the app loads
           init [--starter] [--force]
@@ -18,30 +18,31 @@ module Trellis
                                    set with --starter. Refuses to replace an existing
                                    file without --force.
 
-        The config lives at $TRELLIS_CONFIG, or $TRELLIS_ROOT/config.yml
-        (default ~/.trellis/config.yml), and may be a symlink: writes replace
-        the file it points to, never the link.
+        The config is a JSON file at $TRELLIS_CONFIG, or
+        $TRELLIS_ROOT/config.json (default ~/.trellis/config.json), and may be
+        a symlink: writes replace the file it points to, never the link.
 
         Commands that change the config (bind, unbind, placements, regions,
         settings set) validate the whole result and refuse an invalid one. They
-        rewrite the YAML, keeping key order but dropping comments, and warn
-        when the file had any. To keep comments, edit the file by hand and run
+        rewrite the file with its sections in canonical order and every other
+        key where it was. After editing the file by hand, run
         `trellis config validate`.
         TEXT
 
-      MINIMAL = <<-YAML
-        # Trellis config. Placements are fractions of a screen's visible frame:
-        # rect: [x, y, width, height]. See `trellis config --help`.
+      MINIMAL = <<-JSON
+        {
+          "version": 1,
+          "placements": {
+            "maximize": {
+              "rect": [0, 0, 1, 1]
+            }
+          },
+          "bindings": {
+            "return": "maximize"
+          }
+        }
 
-        version: 1
-
-        placements:
-          maximize: { rect: [0, 0, 1, 1] }
-
-        bindings:
-          return: maximize
-
-        YAML
+        JSON
 
       def run(argv : Array(String)) : Int32
         args = Args.parse(argv, switches: ["--starter", "--force"])
@@ -87,7 +88,7 @@ module Trellis
         if args.json?
           STDOUT.puts Config::Export.to_json(loaded.model)
         else
-          STDERR.puts "# no config file at #{loaded.path}; this is the built-in starter" if loaded.source.starter?
+          STDERR.puts "no config file at #{loaded.path}; this is the built-in starter" if loaded.source.starter?
           STDOUT.print loaded.text
         end
         ExitCode::OK
@@ -130,7 +131,7 @@ module Trellis
         if File.exists?(path.to_s) && !args.switch?("--force")
           raise Error.new("#{path} already exists; pass --force to replace it")
         end
-        text = args.switch?("--starter") ? STARTER_YAML : MINIMAL
+        text = args.switch?("--starter") ? STARTER_CONFIG : MINIMAL
         written = Config::Writer.write(path, text)
         reload = SocketClient.reload_quietly
         kind = args.switch?("--starter") ? "the starter config" : "a minimal config"

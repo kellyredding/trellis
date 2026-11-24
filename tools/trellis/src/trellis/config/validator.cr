@@ -30,16 +30,16 @@ module Trellis
       end
 
       def run : Result
-        root = mapping(@tree, "the config") || {} of String => JSON::Any
+        root = object(@tree, "the config") || {} of String => JSON::Any
         root.each_key do |key|
           error("unknown top-level key #{key.inspect}") unless SECTIONS.includes?(key)
         end
 
         version = check_version(root["version"]?)
         settings = check_settings(root["settings"]?)
-        region_tree = mapping(root["regions"]?, "regions") || {} of String => JSON::Any
+        region_tree = object(root["regions"]?, "regions") || {} of String => JSON::Any
         regions = check_regions(region_tree)
-        placement_tree = mapping(root["placements"]?, "placements") || {} of String => JSON::Any
+        placement_tree = object(root["placements"]?, "placements") || {} of String => JSON::Any
         placements = check_placements(placement_tree, region_tree.keys)
         bindings = check_bindings(root["bindings"]?, settings.leader, placement_tree.keys)
 
@@ -85,7 +85,7 @@ module Trellis
 
       private def check_settings(value : JSON::Any?) : Settings
         defaults = Settings.new
-        tree = mapping(value, "settings")
+        tree = object(value, "settings")
         return defaults unless tree
 
         allowed_keys("settings", tree, ["leader", "chord_wait_ms", "label", "cheat_sheet", "dropdown"])
@@ -118,9 +118,9 @@ module Trellis
           end
         end
 
-        label = mapping(tree["label"]?, "settings.label") || {} of String => JSON::Any
+        label = object(tree["label"]?, "settings.label") || {} of String => JSON::Any
         allowed_keys("settings.label", label, ["screens", "corner"])
-        dropdown = mapping(tree["dropdown"]?, "settings.dropdown") || {} of String => JSON::Any
+        dropdown = object(tree["dropdown"]?, "settings.dropdown") || {} of String => JSON::Any
         allowed_keys("settings.dropdown", dropdown, ["screens"])
 
         Settings.new(
@@ -137,12 +137,12 @@ module Trellis
         tree.map do |name, value|
           where = "regions.#{name}"
           check_name(where, name)
-          body = value.raw.nil? ? ({} of String => JSON::Any) : mapping(value, where) || {} of String => JSON::Any
+          body = value.raw.nil? ? ({} of String => JSON::Any) : object(value, where) || {} of String => JSON::Any
           allowed_keys(where, body, ["margins", "gap"])
 
           margins = Margins.new
           if raw = body["margins"]?
-            if edges = mapping(raw, "#{where}.margins")
+            if edges = object(raw, "#{where}.margins")
               allowed_keys("#{where}.margins", edges, ["top", "right", "bottom", "left"])
               margins = Margins.new(
                 top: fraction("#{where}.margins.top", edges["top"]?),
@@ -181,7 +181,7 @@ module Trellis
           if BUILT_IN_ACTIONS.includes?(name)
             error("#{where}: #{name.inspect} is a built-in action and cannot name a placement")
           end
-          body = mapping(value, where)
+          body = object(value, where)
           next unless body
           allowed_keys(where, body, ["rect", "region"])
 
@@ -249,7 +249,7 @@ module Trellis
       end
 
       private def check_bindings(value : JSON::Any?, leader : String, placement_names : Array(String)) : Array(Binding)
-        tree = mapping(value, "bindings")
+        tree = object(value, "bindings")
         return [] of Binding unless tree
 
         seen = {} of Array(String) => String
@@ -318,10 +318,10 @@ module Trellis
         end
       end
 
-      private def mapping(value : JSON::Any?, where : String) : Hash(String, JSON::Any)?
+      private def object(value : JSON::Any?, where : String) : Hash(String, JSON::Any)?
         return nil if value.nil? || value.raw.nil?
         hash = value.as_h?
-        error("#{where}: must be a mapping, got #{show(value)}") unless hash
+        error("#{where}: must be an object, got #{show(value)}") unless hash
         hash
       end
 

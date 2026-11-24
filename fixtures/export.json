@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "file",
-  "path": "fixtures/config.yml",
+  "path": "fixtures/config.json",
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 350,

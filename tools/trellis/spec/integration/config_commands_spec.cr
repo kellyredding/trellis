@@ -1,20 +1,32 @@
 require "../spec_helper"
 
-private GUTTER_CONFIG = <<-YAML
-  version: 1
+private GUTTER_CONFIG = <<-JSON
+  {
+    "version": 1,
+    "regions": {
+      "gutter": {
+        "margins": {
+          "right": 0.05
+        },
+        "gap": 0.005
+      }
+    },
+    "placements": {
+      "left-half": {
+        "rect": [0, 0, 0.5, 1],
+        "region": "gutter"
+      },
+      "maximize": {
+        "rect": [0, 0, 1, 1]
+      }
+    },
+    "bindings": {
+      "h": "left-half",
+      "return": "maximize"
+    }
+  }
 
-  regions:
-    gutter: { margins: { right: 0.05 }, gap: 0.005 }
-
-  placements:
-    left-half: { rect: [0, 0, 0.5, 1], region: gutter }
-    maximize: { rect: [0, 0, 1, 1] }
-
-  bindings:
-    h: left-half
-    return: maximize
-
-  YAML
+  JSON
 
 describe "trellis version" do
   it "prints the version from the VERSION file" do
@@ -64,7 +76,7 @@ describe "trellis config" do
   it "exports the fixture as the fixture JSON" do
     SpecHelper.sandbox do |sandbox|
       result = SpecHelper.run(sandbox, ["config", "export", "--json"],
-        {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.yml").to_s})
+        {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.json").to_s})
       result.exit_code.should eq(0)
       exported = result.json.as_h.reject("path")
       expected = JSON.parse(File.read((SpecHelper::FIXTURES / "export.json").to_s)).as_h.reject("path")
@@ -74,7 +86,7 @@ describe "trellis config" do
 
   it "exits 1 with the errors on stderr for an invalid config" do
     SpecHelper.sandbox do |sandbox|
-      sandbox.write_config("version: 2\nbindings: { h: nowhere }\n")
+      sandbox.write_config(%({"version": 2, "bindings": {"h": "nowhere"}}\n))
       result = SpecHelper.run(sandbox, ["config", "export", "--json"])
       result.exit_code.should eq(1)
       result.stderr.should contain("version: must be 1")
@@ -90,7 +102,7 @@ describe "trellis config" do
   it "validates and lists prefix warnings" do
     SpecHelper.sandbox do |sandbox|
       result = SpecHelper.run(sandbox, ["config", "validate"],
-        {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.yml").to_s})
+        {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.json").to_s})
       result.exit_code.should eq(0)
       result.stdout.should contain(%(warning: "l" is the start of "l l", so it waits before running))
     end
@@ -106,15 +118,35 @@ describe "trellis config" do
       refused.stderr.should contain("--force")
 
       SpecHelper.run(sandbox, ["config", "init", "--starter", "--force"]).exit_code.should eq(0)
-      sandbox.read_config.should eq(Trellis::STARTER_YAML)
+      sandbox.read_config.should eq(Trellis::STARTER_CONFIG)
     end
   end
 
   it "shows the file, or the starter when there is none" do
     SpecHelper.sandbox do |sandbox|
-      SpecHelper.run(sandbox, ["config", "show"]).stdout.should eq(Trellis::STARTER_YAML)
+      SpecHelper.run(sandbox, ["config", "show"]).stdout.should eq(Trellis::STARTER_CONFIG)
       sandbox.write_config(GUTTER_CONFIG)
       SpecHelper.run(sandbox, ["config", "show"]).stdout.should eq(GUTTER_CONFIG)
+    end
+  end
+
+  it "reports a file that is not JSON with where parsing stopped, and refuses changes to it" do
+    SpecHelper.sandbox do |sandbox|
+      broken = %({\n  "version": 1,\n}\n)
+      sandbox.write_config(broken)
+
+      validate = SpecHelper.run(sandbox, ["config", "validate", "--json"])
+      validate.exit_code.should eq(1)
+      validate.json["errors"].as_a.map(&.as_s).should eq([%(not valid JSON: unexpected token '}' at line 3, column 1)])
+
+      bind = SpecHelper.run(sandbox, ["bind", "h", "maximize"])
+      bind.exit_code.should eq(1)
+      bind.stderr.should contain("not valid JSON")
+      sandbox.read_config.should eq(broken)
+
+      doctor = SpecHelper.run(sandbox, ["doctor"])
+      doctor.exit_code.should eq(1)
+      doctor.stdout.should contain("invalid: not valid JSON: ")
     end
   end
 end
@@ -135,11 +167,11 @@ describe "config mutations" do
 
   it "bind replaces a binding however it was spelled, and unbind removes it" do
     SpecHelper.sandbox do |sandbox|
-      sandbox.write_config(GUTTER_CONFIG.sub("h: left-half", "Control+H: left-half"))
+      sandbox.write_config(GUTTER_CONFIG.sub(%("h": "left-half"), %("Control+H": "left-half")))
       result = SpecHelper.run(sandbox, ["bind", "ctrl+h", "maximize", "--json"])
       result.exit_code.should eq(0)
       result.json["binding"]["target"]["placement"].should eq("maximize")
-      sandbox.read_config.should contain("ctrl+h: maximize")
+      sandbox.read_config.should contain(%("ctrl+h": "maximize"))
       sandbox.read_config.should_not contain("Control+H")
 
       SpecHelper.run(sandbox, ["unbind", "CTRL+H"]).exit_code.should eq(0)
@@ -184,7 +216,7 @@ describe "config mutations" do
     SpecHelper.sandbox do |sandbox|
       sandbox.write_config(GUTTER_CONFIG)
       SpecHelper.run(sandbox, ["placements", "add", "right-half", "--rect", "0.5,0,0.5,1", "--region", "gutter"]).exit_code.should eq(0)
-      sandbox.read_config.should contain("right-half: { rect: [0.5, 0, 0.5, 1], region: gutter }")
+      sandbox.read_config.should contain(%("right-half": {\n      "rect": [0.5, 0, 0.5, 1],\n      "region": "gutter"\n    }))
 
       SpecHelper.run(sandbox, ["placements", "set", "right-half", "--no-region"]).exit_code.should eq(0)
       shown = SpecHelper.run(sandbox, ["placements", "show", "right-half", "--json"]).json
@@ -232,10 +264,10 @@ describe "config mutations" do
       SpecHelper.run(sandbox, ["settings", "get", "leader", "--json"]).json["value"].should eq("ctrl+b")
 
       written = sandbox.read_config
-      written.index!("version").should be < written.index!("settings")
-      written.index!("settings").should be < written.index!("regions")
-      written.index!("placements").should be < written.index!("bindings")
-      written.should contain("  label:\n    corner: top-left\n")
+      written.index!(%("version")).should be < written.index!(%("settings"))
+      written.index!(%("settings")).should be < written.index!(%("regions"))
+      written.index!(%("placements")).should be < written.index!(%("bindings"))
+      written.should contain(%(  "settings": {\n    "label": {\n      "corner": "top-left"\n    },\n    "leader": "ctrl+b"\n  },\n))
 
       listed = SpecHelper.run(sandbox, ["settings", "list"]).stdout
       listed.should match(/label\.corner\s+top-left\s*\n/)
@@ -245,7 +277,7 @@ describe "config mutations" do
 
   it "resolves chords: bound, waiting, and unbound" do
     SpecHelper.sandbox do |sandbox|
-      env = {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.yml").to_s}
+      env = {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.json").to_s}
       waits = SpecHelper.run(sandbox, ["resolve", "l", "--json"], env).json
       waits["target"]["placement"].should eq("right-half")
       waits["prefix"].should eq(true)
@@ -260,36 +292,6 @@ describe "config mutations" do
       SpecHelper.run(sandbox, ["resolve", "escape"], env).exit_code.should eq(2)
     end
   end
-
-  describe "comment warnings" do
-    it "warns when rewriting a file that has comments, and still writes" do
-      SpecHelper.sandbox do |sandbox|
-        sandbox.write_config("# mine\n" + GUTTER_CONFIG)
-        warning = "warning: rewriting #{sandbox.config} drops its comments; edit the file " \
-                  "directly to keep them, then `trellis config validate`"
-
-        text = SpecHelper.run(sandbox, ["bind", "l", "maximize"])
-        text.exit_code.should eq(0)
-        text.stderr.should contain(warning)
-        sandbox.read_config.should_not contain("# mine")
-        sandbox.read_config.should contain("l: maximize")
-
-        sandbox.write_config("# mine\n" + GUTTER_CONFIG)
-        json = SpecHelper.run(sandbox, ["bind", "l", "maximize", "--json"])
-        json.json["warnings"].should eq(JSON.parse([warning].to_json))
-      end
-    end
-
-    it "says nothing when the file has none" do
-      SpecHelper.sandbox do |sandbox|
-        sandbox.write_config(GUTTER_CONFIG)
-        text = SpecHelper.run(sandbox, ["bind", "l", "maximize"])
-        text.stderr.should_not contain("comments")
-        json = SpecHelper.run(sandbox, ["bind", "k", "maximize", "--json"])
-        json.json["warnings"].as_a.should be_empty
-      end
-    end
-  end
 end
 
 describe "symlink safety" do
@@ -297,7 +299,7 @@ describe "symlink safety" do
     SpecHelper.sandbox do |sandbox|
       dotfiles = sandbox.root / "dotfiles"
       Dir.mkdir_p(dotfiles.to_s)
-      real = dotfiles / "trellis.yml"
+      real = dotfiles / "trellis.json"
       File.write(real.to_s, GUTTER_CONFIG)
       File.symlink(real.to_s, sandbox.config.to_s)
 
@@ -307,8 +309,8 @@ describe "symlink safety" do
 
       File.symlink?(sandbox.config.to_s).should be_true
       File.readlink(sandbox.config.to_s).should eq(real.to_s)
-      File.read(real.to_s).should contain("l: maximize")
-      Dir.children(dotfiles.to_s).should eq(["trellis.yml"])
+      File.read(real.to_s).should contain(%("l": "maximize"))
+      Dir.children(dotfiles.to_s).should eq(["trellis.json"])
 
       path = SpecHelper.run(sandbox, ["config", "path", "--json"]).json
       path["path"].should eq(sandbox.config.to_s)
@@ -318,7 +320,7 @@ describe "symlink safety" do
 
   it "leaves a symlinked config untouched when a change is refused" do
     SpecHelper.sandbox do |sandbox|
-      real = sandbox.root / "elsewhere.yml"
+      real = sandbox.root / "elsewhere.json"
       File.write(real.to_s, GUTTER_CONFIG)
       File.symlink(real.to_s, sandbox.config.to_s)
 

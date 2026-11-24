@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "settings": {
+    "chord_wait_ms": 350,
+    "label": {
+      "screens": "main"
+    }
+  },
+  "regions": {
+    "gutter": {
+      "margins": {
+        "right": 0.05
+      },
+      "gap": 0.005
+    },
+    "stack": {
+      "margins": {
+        "right": 0.05
+      },
+      "gap": {
+        "x": 0.005,
+        "y": 0.025
+      }
+    }
+  },
+  "placements": {
+    "left-half": {
+      "rect": [0, 0, 0.5, 1],
+      "region": "gutter"
+    },
+    "right-half": {
+      "rect": [0.5, 0, 0.5, 1],
+      "region": "gutter"
+    },
+    "right-half-full": {
+      "rect": {
+        "x": 0.5,
+        "y": 0,
+        "w": 0.5,
+        "h": 1
+      }
+    },
+    "top-right-third": {
+      "rect": [0.5, 0, 0.5, 0.25],
+      "region": "stack"
+    }
+  },
+  "bindings": {
+    "h": "left-half",
+    "l": "right-half",
+    "l l": "right-half-full",
+    "t": "top-right-third",
+    "CMD+Ctrl+H": "left-half",
+    "right": "screen-east"
+  }
+}

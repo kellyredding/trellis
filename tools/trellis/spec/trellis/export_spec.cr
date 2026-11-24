@@ -7,8 +7,8 @@ private def comparable(json : JSON::Any) : JSON::Any
 end
 
 describe Trellis::Config::Export do
-  it "exports fixtures/config.yml as fixtures/export.json" do
-    model = Trellis::Config::Store.model(SpecHelper::FIXTURES / "config.yml")
+  it "exports fixtures/config.json as fixtures/export.json" do
+    model = Trellis::Config::Store.model(SpecHelper::FIXTURES / "config.json")
     exported = JSON.parse(Trellis::Config::Export.to_json(model))
     expected = JSON.parse(File.read((SpecHelper::FIXTURES / "export.json").to_s))
 
@@ -17,8 +17,8 @@ describe Trellis::Config::Export do
 
   it "reports the configured path, not the symlink's target" do
     SpecHelper.sandbox do |sandbox|
-      real = sandbox.root / "real.yml"
-      File.write(real.to_s, "version: 1\n")
+      real = sandbox.root / "real.json"
+      File.write(real.to_s, %({"version": 1}\n))
       File.symlink(real.to_s, sandbox.config.to_s)
 
       model = Trellis::Config::Store.model(sandbox.config)
@@ -27,7 +27,7 @@ describe Trellis::Config::Export do
   end
 
   it "writes whole fractions as integers and the rest as decimals" do
-    model = SpecHelper.validate("placements: { a: { rect: [0, 0.25, 1.0, 0.75] } }").model!
+    model = SpecHelper.validate(%({"placements": {"a": {"rect": [0, 0.25, 1.0, 0.75]}}})).model!
     json = Trellis::Config::Export.to_json(model)
     json.should contain(%("x": 0,))
     json.should contain(%("y": 0.25,))
@@ -55,7 +55,7 @@ describe "the starter config" do
 end
 
 describe "resolving a chord" do
-  model = SpecHelper.validate("bindings: { h: screen-west, l: screen-east, \"l l\": screen-west, \"x y\": screen-east }").model!
+  model = SpecHelper.validate(%({"bindings": {"h": "screen-west", "l": "screen-east", "l l": "screen-west", "x y": "screen-east"}})).model!
 
   it "finds the binding and what it starts" do
     model.binding?(["l"]).not_nil!.action.should eq("screen-east")

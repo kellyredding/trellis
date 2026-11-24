@@ -9,7 +9,8 @@ module Trellis
         trellis doctor — check the CLI, the config and the app
 
         Reports the CLI version; the config path, where its symlink resolves,
-        whether it is a file or the built-in starter, and whether it is valid;
+        whether it is a file or the built-in starter, and whether it is valid
+        JSON and a valid config;
         and whether the app answers, its version and its Accessibility grant.
         Exits 1 when a check fails. The app not running is a warning.
         TEXT

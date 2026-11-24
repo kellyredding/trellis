@@ -20,12 +20,12 @@ describe "live commands" do
   it "sends one envelope per request: v, event, ts, and no detail_data for status" do
     SpecHelper.sandbox do |sandbox|
       status = ok(%({"version": "0.1.0", "pid": 99, "accessibility": true, "layout_mode": false, ) +
-                  %("config": {"path": "/x/config.yml", "source": "file", "loaded": true, "error": null}}))
+                  %("config": {"path": "/x/config.json", "source": "file", "loaded": true, "error": null}}))
       SpecHelper.with_app(sandbox, {"status" => status}) do |app|
         result = SpecHelper.run_live(sandbox, app, ["status"])
         result.exit_code.should eq(0)
         result.stdout.should contain("accessibility  granted")
-        result.stdout.should contain("config         loaded from /x/config.yml (file)")
+        result.stdout.should contain("config         loaded from /x/config.json (file)")
 
         request = app.request
         request["v"].should eq(1)
@@ -114,10 +114,10 @@ describe "live commands" do
 
   it "reload sends config.reload and fails when the app could not load it" do
     SpecHelper.sandbox do |sandbox|
-      SpecHelper.with_app(sandbox, {"config.reload" => ok(%({"loaded": false, "error": "bad yaml"}))}) do |app|
+      SpecHelper.with_app(sandbox, {"config.reload" => ok(%({"loaded": false, "error": "bad config"}))}) do |app|
         result = SpecHelper.run_live(sandbox, app, ["reload"])
         result.exit_code.should eq(1)
-        result.stderr.should contain("bad yaml")
+        result.stderr.should contain("bad config")
         app.request["event"].should eq("config.reload")
       end
     end

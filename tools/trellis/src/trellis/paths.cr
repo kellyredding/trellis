@@ -11,7 +11,7 @@ module Trellis
     end
 
     def config_file : Path
-      env_path("TRELLIS_CONFIG") || root / "config.yml"
+      env_path("TRELLIS_CONFIG") || root / "config.json"
     end
 
     def runtime_dir : Path

@@ -22,8 +22,7 @@ module Trellis
         another slot, as a fraction of the width (x) or height (y). Every
         value is from 0 to 0.5.
 
-        Changes rewrite the config file, dropping its comments (see
-        `trellis config --help`).
+        Changes rewrite the config file (see `trellis config --help`).
         TEXT
 
       VALUE_FLAGS = EDGES.map { |edge| "--margin-#{edge}" } + ["--gap", "--gap-x", "--gap-y"]

@@ -57,12 +57,10 @@ module Trellis
               json.field "path", outcome.path.to_s
               json.field "written", outcome.written.to_s
               extra.call(json)
-              json.field "warnings", outcome.warnings
               json.field "reload", outcome.reload
             end
           end
         else
-          outcome.warnings.each { |warning| STDERR.puts warning }
           STDOUT.puts message
           STDOUT.puts "  wrote #{outcome.written}" if outcome.written != outcome.path.expand
           STDOUT.puts "  #{outcome.reload.summary}"

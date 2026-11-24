@@ -28,7 +28,7 @@ struct TrellisPaths: Equatable {
             return URL(fileURLWithPath: (value as NSString).expandingTildeInPath)
         }
         root = override("TRELLIS_ROOT") ?? home.appendingPathComponent(".trellis")
-        configFile = override("TRELLIS_CONFIG") ?? root.appendingPathComponent("config.yml")
+        configFile = override("TRELLIS_CONFIG") ?? root.appendingPathComponent("config.json")
         runtimeDir = override("TRELLIS_RUNTIME_DIR") ?? root.appendingPathComponent("runtime")
         socket = override("TRELLIS_SOCKET") ?? runtimeDir.appendingPathComponent("trellis.sock")
         binary = override("TRELLIS_BINARY")

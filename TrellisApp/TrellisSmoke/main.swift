@@ -29,7 +29,7 @@ func chord(_ text: String) -> [KeyToken] { KeyToken.chord(text)! }
 let home = URL(fileURLWithPath: "/Users/someone")
 let defaults = TrellisPaths(environment: [:], home: home)
 check("root defaults to ~/.trellis", defaults.root.path == "/Users/someone/.trellis")
-check("config defaults under root", defaults.configFile.path == "/Users/someone/.trellis/config.yml")
+check("config defaults under root", defaults.configFile.path == "/Users/someone/.trellis/config.json")
 check("runtime defaults under root", defaults.runtimeDir.path == "/Users/someone/.trellis/runtime")
 check("socket defaults under runtime", defaults.socket.path == "/Users/someone/.trellis/runtime/trellis.sock")
 check("lock sits beside the socket", defaults.lockFile.path == "/Users/someone/.trellis/runtime/trellis.sock.lock")
@@ -39,10 +39,10 @@ check("binary defaults under root", defaults.binary.path == "/Users/someone/.tre
 let rooted = TrellisPaths(environment: ["TRELLIS_ROOT": "/tmp/t"], home: home)
 check("TRELLIS_ROOT moves every default", rooted.socket.path == "/tmp/t/runtime/trellis.sock")
 let overridden = TrellisPaths(environment: [
-    "TRELLIS_ROOT": "/tmp/t", "TRELLIS_CONFIG": "/tmp/c.yml", "TRELLIS_RUNTIME_DIR": "/tmp/r",
+    "TRELLIS_ROOT": "/tmp/t", "TRELLIS_CONFIG": "/tmp/c.json", "TRELLIS_RUNTIME_DIR": "/tmp/r",
     "TRELLIS_SOCKET": "/tmp/s.sock", "TRELLIS_BINARY": "/tmp/bin/trellis",
 ], home: home)
-check("TRELLIS_CONFIG overrides", overridden.configFile.path == "/tmp/c.yml")
+check("TRELLIS_CONFIG overrides", overridden.configFile.path == "/tmp/c.json")
 check("TRELLIS_RUNTIME_DIR overrides", overridden.runtimeDir.path == "/tmp/r")
 check("TRELLIS_SOCKET overrides", overridden.socket.path == "/tmp/s.sock")
 check("the lock follows an overridden socket", overridden.lockFile.path == "/tmp/s.sock.lock")
@@ -395,7 +395,7 @@ func replyObject(_ data: Data) -> [String: Any]? {
 
 let statusReply = Reply.ok(StatusData(
     version: "0.1.0", pid: 42, accessibility: false, layoutMode: true,
-    config: .init(path: "/x/config.yml", source: nil, loaded: false, error: "bad")
+    config: .init(path: "/x/config.json", source: nil, loaded: false, error: "bad")
 ))
 let statusObject = replyObject(statusReply)
 let statusData = statusObject?["data"] as? [String: Any]
@@ -403,7 +403,7 @@ check("a reply is one line", !statusReply.contains(0x0A))
 check("a success reply is ok", statusObject?["ok"] as? Bool == true)
 check("status carries layout_mode", statusData?["layout_mode"] as? Bool == true)
 check("status config carries a null source", (statusData?["config"] as? [String: Any])?["source"] is NSNull)
-check("slashes stay unescaped", String(decoding: statusReply, as: UTF8.self).contains("/x/config.yml"))
+check("slashes stay unescaped", String(decoding: statusReply, as: UTF8.self).contains("/x/config.json"))
 
 let chordReply = replyObject(Reply.ok(ChordData(keys: "x", target: nil, ran: false)))
 check("an unbound chord replies target null", (chordReply?["data"] as? [String: Any])?["target"] is NSNull)

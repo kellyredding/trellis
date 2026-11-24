@@ -12,7 +12,7 @@ sides in the same commit.
 | Config export | `tools/trellis/src/trellis/config/export.cr` | `TrellisApp/TrellisApp/Models/ConfigModel.swift` |
 | Socket envelope and events | `tools/trellis/src/trellis/socket_client.cr` | `TrellisApp/TrellisApp/Models/Envelope.swift` |
 
-`fixtures/config.yml` and `fixtures/export.json` pin the export shape for
+`fixtures/config.json` and `fixtures/export.json` pin the export shape for
 both sides: the CLI specs assert that exporting the config yields the JSON
 (compared as values, ignoring `path`, with `0` equal to `0.0`), and the app's
 smoke check (`make app-smoke`) decodes the JSON. A drift on either side fails
@@ -38,7 +38,7 @@ run against temporary directories.
 | Path | Default | Override |
 |---|---|---|
 | Root | `~/.trellis` | `TRELLIS_ROOT` |
-| Config | `<root>/config.yml` | `TRELLIS_CONFIG` |
+| Config | `<root>/config.json` | `TRELLIS_CONFIG` |
 | Runtime dir | `<root>/runtime` | `TRELLIS_RUNTIME_DIR` |
 | Socket | `<runtime>/trellis.sock` | `TRELLIS_SOCKET` |
 | Instance lock | `<socket>.lock` | — |
@@ -69,48 +69,79 @@ A **key token** is zero or more modifiers and one key, joined by `+`. A
 - `escape` may not appear in a binding (it leaves layout mode), and no
   binding's first token may equal the leader.
 
-## Config file (YAML, read and written only by the CLI)
+## Config file (JSON, read and written only by the CLI)
 
-```yaml
-version: 1
-
-settings:
-  leader: ctrl+s
-  chord_wait_ms: 400        # 50–2000
-  label:
-    screens: all            # all | main | target
-    corner: bottom-right    # top-left | top-right | bottom-left | bottom-right
-  cheat_sheet: off          # off | label | dropdown
-  dropdown:
-    screens: off            # off | all | main
-
-regions:
-  gutter:
-    margins: { right: 0.05 }    # fractions of the visible frame, per edge
-    gap: 0.005                  # a number, or { x: 0.005, y: 0.025 }
-
-placements:
-  left-half:  { rect: [0, 0, 0.5, 1], region: gutter }
-  maximize:   { rect: [0, 0, 1, 1] }
-
-bindings:
-  h: left-half
-  "l l": right-half-full
-  right: screen-east
+```json
+{
+  "version": 1,
+  "settings": {
+    "leader": "ctrl+s",
+    "chord_wait_ms": 400,
+    "label": {
+      "screens": "all",
+      "corner": "bottom-right"
+    },
+    "cheat_sheet": "off",
+    "dropdown": {
+      "screens": "off"
+    }
+  },
+  "regions": {
+    "gutter": {
+      "margins": {
+        "right": 0.05
+      },
+      "gap": 0.005
+    }
+  },
+  "placements": {
+    "left-half": {
+      "rect": [0, 0, 0.5, 1],
+      "region": "gutter"
+    },
+    "maximize": {
+      "rect": [0, 0, 1, 1]
+    }
+  },
+  "bindings": {
+    "h": "left-half",
+    "l l": "right-half-full",
+    "right": "screen-east"
+  }
+}
 ```
+
+| Setting | Default | Values |
+|---|---|---|
+| `leader` | `ctrl+s` | one key token with at least one modifier |
+| `chord_wait_ms` | `400` | a whole number, `50`–`2000` |
+| `label.screens` | `all` | `all`, `main`, `target` |
+| `label.corner` | `bottom-right` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
+| `cheat_sheet` | `off` | `off`, `label`, `dropdown` |
+| `dropdown.screens` | `off` | `off`, `all`, `main` |
+
+A region's `margins` are fractions of the visible frame, per edge (`top`,
+`right`, `bottom`, `left`); its `gap` is a number, or `{"x": 0.005, "y":
+0.025}`.
 
 Every key is optional; absent settings take the defaults above. When the
 config file does not exist, the CLI uses the starter config embedded in it
-(`config/starter.yml` in the repository); `trellis config init --starter`
+(`config/starter.json` in the repository); `trellis config init --starter`
 writes that out.
+
+The file is strict JSON (RFC 8259, with no extensions). A file that does not
+parse, or repeats a key within one object, is invalid, and the error gives
+the line and column. The CLI writes the file with two-space
+indentation, the top-level keys in the order above, every other key in its
+existing order, arrays of plain values on one line, and a trailing newline.
 
 ### Validation
 
-- Unknown keys are errors at every level (`arrangements` included, until
-  arrangements exist), so a typo is reported rather than ignored.
+- The top level is an object. Unknown keys are errors at every level
+  (`arrangements` included, until arrangements exist), so a typo is reported
+  rather than ignored.
 - `version` is `1`; a missing `version` reads as `1`.
-- Settings: values within the ranges and enumerations above; `leader` is a
-  single key token with at least one modifier.
+- Settings: each value is one the table above allows.
 - Regions: names match `[a-z0-9][a-z0-9-]*`; each margin and each gap is a
   number in `0…0.5`; per axis the two margins sum to less than `1`; a gap
   object with only `x` or `y` takes `0` for the other.
@@ -122,8 +153,6 @@ writes that out.
   separated by single spaces); each value names a placement or a built-in
   action. Built-in actions: `screen-east`, `screen-west`. Two spellings of
   the same canonical chord (`ctrl+h` and `control+h`) are an error.
-- YAML plain scalars `off`, `on`, `yes`, `no` are read as strings, never
-  booleans, so `cheat_sheet: off` means the enumeration value.
 - A chord that is also the prefix of a longer chord is a **warning**, not an
   error: it is valid, and it waits. One warning per (prefix, longer chord)
   pair, worded exactly `"<prefix>" is the start of "<longer>", so it waits
@@ -139,7 +168,7 @@ canonical chord.
 {
   "version": 1,
   "source": "file",
-  "path": "/Users/me/.trellis/config.yml",
+  "path": "/Users/me/.trellis/config.json",
   "settings": {
     "leader": "ctrl+s",
     "chord_wait_ms": 400,
@@ -193,7 +222,7 @@ and the Dock):
    Edges on the area boundary do not move.
 4. Round to whole points.
 
-Check: `V.w = 1000`, region `{ margins: { right: 0.05 }, gap: 0.005 }`,
+Check: `V.w = 1000`, region `{"margins": {"right": 0.05}, "gap": 0.005}`,
 rect `[0.5, 0, 0.5, 1]` → `x = 477.5`, `w = 472.5` before rounding — the
 Hammerspoon `right` layout.
 
