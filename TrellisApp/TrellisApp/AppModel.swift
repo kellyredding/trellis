@@ -93,7 +93,7 @@ final class AppModel: ObservableObject {
             .store(in: &subscriptions)
 
         hotkey.onPress = { [weak self] in self?.leaderPressed() }
-        hotkey.register(leader)
+        configStore.onFirstLoad = { [weak self] in self?.firstConfigLoad() }
         layoutMode.onRun = { [weak self] binding in self?.run(binding) }
         layoutMode.start()
 
@@ -157,7 +157,7 @@ final class AppModel: ObservableObject {
             config: .init(
                 path: paths.configFile.path,
                 source: configStore.config?.source,
-                loaded: configStore.isLoaded,
+                state: configStore.state,
                 error: configStore.error
             )
         )
@@ -169,7 +169,18 @@ final class AppModel: ObservableObject {
         if !wasActive, layoutMode.isActive { locateTargetScreen() }
     }
 
+    private func firstConfigLoad() {
+        if !configStore.isLoaded {
+            Log.error("no config loaded (\(configStore.error ?? "no reason given")); using the default leader")
+        }
+        configChanged(configStore.config)
+    }
+
+    /// No leader until the first load finishes: registering the default first
+    /// would hold its key (⌃S) against other apps until the configured one
+    /// replaced it.
     private func configChanged(_ config: TrellisConfig?) {
+        guard configStore.hasFinishedFirstLoad else { return }
         hotkey.register(leader)
         layoutMode.leaderChanged(to: leader)
         if config?.settings.label.screens == .target { locateTargetScreen() }

@@ -34,6 +34,25 @@ module Trellis
       "#{field(value, "w")}x#{field(value, "h")} at #{field(value, "x")},#{field(value, "y")}"
     end
 
+    # The `config` object of the app's `status` reply. A loaded config with an
+    # error is the last good one, kept after a failed reload; the error's lines
+    # follow, each prefixed by `indent` and two spaces.
+    def app_config(config : JSON::Any, indent : String = "") : String
+      error = config["error"]?.try(&.as_s?)
+      if config["loaded"]?.try(&.as_bool?)
+        loaded = "loaded from #{field(config, "path")} (#{field(config, "source")})"
+        return loaded unless error
+        lines = error.rstrip.lines.map { |line| "#{indent}  #{line}" }
+        "#{loaded} — keeping the last good config; reload failed:\n#{lines.join("\n")}"
+      elsif config["state"]?.try(&.as_s?) == "loading"
+        "loading…"
+      elsif error
+        "not loaded: #{error}"
+      else
+        "not loaded, and the app gave no reason"
+      end
+    end
+
     def field(object : JSON::Any, key : String) : String
       value = object.as_h? ? object[key]? : nil
       case raw = value.try(&.raw)

@@ -445,7 +445,7 @@ func replyObject(_ data: Data) -> [String: Any]? {
 
 let statusReply = Reply.ok(StatusData(
     version: "0.1.0", pid: 42, accessibility: false, layoutMode: true,
-    config: .init(path: "/x/config.json", source: nil, loaded: false, error: "bad")
+    config: .init(path: "/x/config.json", source: nil, state: .failed, error: "bad")
 ))
 let statusObject = replyObject(statusReply)
 let statusData = statusObject?["data"] as? [String: Any]
@@ -454,6 +454,22 @@ check("a success reply is ok", statusObject?["ok"] as? Bool == true)
 check("status carries layout_mode", statusData?["layout_mode"] as? Bool == true)
 check("status config carries a null source", (statusData?["config"] as? [String: Any])?["source"] is NSNull)
 check("slashes stay unescaped", String(decoding: statusReply, as: UTF8.self).contains("/x/config.json"))
+
+func statusConfig(_ state: ConfigLoadState) -> [String: Any]? {
+    let reply = Reply.ok(StatusData(
+        version: "0.1.0", pid: 42, accessibility: true, layoutMode: false,
+        config: .init(path: "/x/config.json", source: nil, state: state, error: nil)
+    ))
+    return (replyObject(reply)?["data"] as? [String: Any])?["config"] as? [String: Any]
+}
+check("config is loading until the first load finishes",
+      ConfigLoadState(hasConfig: false, finishedFirstLoad: false) == .loading)
+check("config failed when the first load gave none",
+      ConfigLoadState(hasConfig: false, finishedFirstLoad: true) == .failed)
+check("a live config is loaded", ConfigLoadState(hasConfig: true, finishedFirstLoad: true) == .loaded)
+check("status reports loading as not loaded",
+      statusConfig(.loading)?["state"] as? String == "loading" && statusConfig(.loading)?["loaded"] as? Bool == false)
+check("status reports loaded", statusConfig(.loaded)?["loaded"] as? Bool == true)
 
 let chordReply = replyObject(Reply.ok(ChordData(keys: "x", target: nil, ran: false)))
 check("an unbound chord replies target null", (chordReply?["data"] as? [String: Any])?["target"] is NSNull)

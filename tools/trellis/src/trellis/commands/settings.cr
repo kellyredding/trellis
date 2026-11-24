@@ -88,21 +88,7 @@ module Trellis
       private def set(args : Args) : Int32
         args.at_most(3)
         key = known_key(args.positional(1, "a setting key"))
-        raw = args.positional(2, "a value")
-        typed = case key
-                when "chord_wait_ms"
-                  JSON::Any.new(raw.to_i64? || raise Error.new("chord_wait_ms must be a whole number, got #{raw.inspect}"))
-                when "label.linger_ms"
-                  linger = raw.to_i64?
-                  unless linger && Config::Validator::LINGER_MS.includes?(linger)
-                    raise UsageError.new("label.linger_ms must be a whole number from 0 to 3000, got #{raw.inspect}")
-                  end
-                  JSON::Any.new(linger)
-                when "leader"
-                  JSON::Any.new(Keys.canonical_token(raw))
-                else
-                  JSON::Any.new(raw)
-                end
+        typed = typed_value(key, args.positional(2, "a value"))
 
         outcome = Config::Mutation.apply do |mutation|
           hash = mutation.section("settings")
@@ -120,6 +106,35 @@ module Trellis
           json.field "key", key
           json.field "value", updated
         end
+      end
+
+      # A value no config could hold is a usage error, refused before the config
+      # is read; one that clashes with the rest (a leader a binding starts with)
+      # still fails validation.
+      private def typed_value(key : String, raw : String) : JSON::Any
+        case key
+        when "leader"
+          token = Keys.token(raw)
+          raise UsageError.new("leader: #{raw.inspect} needs at least one modifier") if token.modifiers.empty?
+          JSON::Any.new(token.to_s)
+        when "chord_wait_ms"   then JSON::Any.new(whole(key, raw, Config::Validator::CHORD_WAIT_MS))
+        when "label.linger_ms" then JSON::Any.new(whole(key, raw, Config::Validator::LINGER_MS))
+        when "label.screens"   then JSON::Any.new(choice(key, raw, Config::Validator::LABEL_SCREENS))
+        when "label.corner"    then JSON::Any.new(choice(key, raw, Config::Validator::LABEL_CORNERS))
+        when "cheat_sheet"     then JSON::Any.new(choice(key, raw, Config::Validator::CHEAT_SHEETS))
+        else                        JSON::Any.new(choice(key, raw, Config::Validator::DROPDOWN_SCREENS))
+        end
+      end
+
+      private def whole(key : String, raw : String, range : Range(Int64, Int64)) : Int64
+        value = raw.to_i64?
+        return value if value && range.includes?(value)
+        raise UsageError.new("#{key} must be a whole number from #{range.begin} to #{range.end}, got #{raw.inspect}")
+      end
+
+      private def choice(key : String, raw : String, allowed : Array(String)) : String
+        return raw if allowed.includes?(raw)
+        raise UsageError.new("#{key} must be one of #{allowed.join(", ")}, got #{raw.inspect}")
       end
 
       private def known_key(key : String) : String

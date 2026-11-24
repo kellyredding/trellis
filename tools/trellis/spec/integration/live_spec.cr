@@ -36,6 +36,41 @@ describe "live commands" do
     end
   end
 
+  it "status says when the app is still loading its config, and never prints a bare ?" do
+    SpecHelper.sandbox do |sandbox|
+      {
+        %("loaded": false, "state": "loading", "error": null) => "config         loading…\n",
+        %("loaded": false, "state": "failed", "error": "bad") => "config         not loaded: bad\n",
+        %("loaded": false, "error": null)                     => "config         not loaded, and the app gave no reason\n",
+      }.each do |fields, line|
+        status = ok(%({"version": "0.1.0", "pid": 99, "accessibility": true, "layout_mode": false, ) +
+                    %("config": {"path": "/x/config.json", "source": null, #{fields}}}))
+        SpecHelper.with_app(sandbox, {"status" => status}) do |app|
+          result = SpecHelper.run_live(sandbox, app, ["status"])
+          result.exit_code.should eq(0)
+          result.stdout.should contain(line)
+        end
+      end
+    end
+  end
+
+  it "status shows a failed reload's error beside the last good config" do
+    SpecHelper.sandbox do |sandbox|
+      error = "trellis: the config is invalid\\n  settings.label.linger_ms: must be a whole number from 0 to 3000, got 9000\\n"
+      status = ok(%({"version": "0.1.0", "pid": 99, "accessibility": true, "layout_mode": false, ) +
+                  %("config": {"path": "/x/config.json", "source": "file", "loaded": true, "state": "loaded", ) +
+                  %("error": "#{error}"}}))
+      SpecHelper.with_app(sandbox, {"status" => status}) do |app|
+        result = SpecHelper.run_live(sandbox, app, ["status"])
+        result.exit_code.should eq(0)
+        result.stdout.should end_with(
+          "config         loaded from /x/config.json (file) — keeping the last good config; reload failed:\n" \
+          "                 trellis: the config is invalid\n" \
+          "                   settings.label.linger_ms: must be a whole number from 0 to 3000, got 9000\n")
+      end
+    end
+  end
+
   it "prints the reply's data with --json" do
     SpecHelper.sandbox do |sandbox|
       SpecHelper.with_app(sandbox, {"screens" => ok(%({"screens": [#{SCREEN}]}))}) do |app|

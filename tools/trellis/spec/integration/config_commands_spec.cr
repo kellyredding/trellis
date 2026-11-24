@@ -190,8 +190,6 @@ describe "config mutations" do
         ["bind", "x", "nowhere"],
         ["bind", "escape", "maximize"],
         ["bind", "ctrl+s x", "maximize"],
-        ["settings", "set", "chord_wait_ms", "9000"],
-        ["settings", "set", "label.corner", "middle"],
         ["placements", "add", "Bad Name", "--rect", "0,0,1,1", "--group", "Halves"],
         ["placements", "add", "x", "--rect", "0,0,1,1", "--region", "missing", "--group", "Halves"],
         ["placements", "add", "x", "--rect", "0,0,1,1", "--group", "Nope"],
@@ -304,6 +302,32 @@ describe "config mutations" do
 
       SpecHelper.run(sandbox, ["settings", "set", "label.linger_ms", "2500"]).exit_code.should eq(0)
       SpecHelper.run(sandbox, ["config", "export", "--json"]).json["settings"]["label"]["linger_ms"].should eq(2500)
+    end
+  end
+
+  it "refuses every bad settings argument as a usage error before writing" do
+    SpecHelper.sandbox do |sandbox|
+      sandbox.write_config(GUTTER_CONFIG)
+      {
+        ["nope", "1"]                => "unknown setting",
+        ["chord_wait_ms", "BAD"]     => "50 to 2000",
+        ["chord_wait_ms", "1.5"]     => "50 to 2000",
+        ["chord_wait_ms", "49"]      => "50 to 2000",
+        ["chord_wait_ms", "9000"]    => "50 to 2000",
+        ["label.linger_ms", "BAD"]   => "0 to 3000",
+        ["label.linger_ms", "3001"]  => "0 to 3000",
+        ["label.corner", "middle"]   => "top-left, top-right",
+        ["label.screens", "some"]    => "all, main, target",
+        ["cheat_sheet", "on"]        => "off, label, dropdown",
+        ["dropdown.screens", "Main"] => "off, all, main",
+        ["leader", "s"]              => "needs at least one modifier",
+        ["leader", "ctrl+nope"]      => "is not a key name",
+      }.each do |argv, message|
+        result = SpecHelper.run(sandbox, ["settings", "set"] + argv)
+        result.exit_code.should eq(2), "#{argv.join(" ")} exited #{result.exit_code}: #{result.stderr}"
+        result.stderr.should contain(message)
+        sandbox.read_config.should eq(GUTTER_CONFIG)
+      end
     end
   end
 

@@ -8,6 +8,10 @@ final class ConfigStore: ObservableObject {
     @Published private(set) var config: TrellisConfig?
     @Published private(set) var error: String?
     @Published private(set) var loadedAt: Date?
+    @Published private(set) var hasFinishedFirstLoad = false
+
+    /// Called once, after the first load succeeds or fails.
+    var onFirstLoad: (() -> Void)?
 
     let paths: TrellisPaths
     private let cli: CLIRunner
@@ -21,6 +25,8 @@ final class ConfigStore: ObservableObject {
     }
 
     var isLoaded: Bool { config != nil }
+
+    var state: ConfigLoadState { ConfigLoadState(hasConfig: isLoaded, finishedFirstLoad: hasFinishedFirstLoad) }
 
     func start() {
         Task { await reload() }
@@ -40,7 +46,13 @@ final class ConfigStore: ObservableObject {
     }
 
     private func load() async -> ReloadData {
-        defer { rewatch() }
+        defer {
+            rewatch()
+            if !hasFinishedFirstLoad {
+                hasFinishedFirstLoad = true
+                onFirstLoad?()
+            }
+        }
         do {
             let loaded = try await cli.exportConfig()
             if loaded != config { config = loaded }

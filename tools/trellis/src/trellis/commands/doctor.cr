@@ -133,8 +133,7 @@ module Trellis
         if app_config && app_config["loaded"]?.try(&.as_bool?)
           checks << Check.new(Level::Ok, "app config", "loaded")
         else
-          reason = app_config.try { |config| config["error"]?.try(&.as_s?) } || "not loaded"
-          checks << Check.new(Level::Warn, "app config", reason)
+          checks << Check.new(Level::Warn, "app config", app_config.try { |config| Format.app_config(config) } || "not reported")
         end
 
         ->(json : JSON::Builder) do

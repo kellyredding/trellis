@@ -96,11 +96,7 @@ module Trellis
         STDOUT.puts "accessibility  #{data["accessibility"]?.try(&.as_bool?) ? "granted" : "NOT granted"}"
         STDOUT.puts "layout mode    #{data["layout_mode"]?.try(&.as_bool?) ? "on" : "off"}"
         if config = data["config"]?
-          if config["loaded"]?.try(&.as_bool?)
-            STDOUT.puts "config         loaded from #{Format.field(config, "path")} (#{Format.field(config, "source")})"
-          else
-            STDOUT.puts "config         not loaded: #{Format.field(config, "error")}"
-          end
+          STDOUT.puts "config         #{Format.app_config(config, " " * 15)}"
         end
         ExitCode::OK
       end

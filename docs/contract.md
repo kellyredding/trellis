@@ -311,6 +311,9 @@ Reply details the app settles:
   `"ran": false`; `"ran": false` means the chord is unbound
 - A failed `config.reload` is `"ok": true` with `"loaded": false` and the
   error: the request worked, the config did not
+- `status`'s config `state` is `"loading"` until the app's first load
+  finishes, then `"loaded"` while a config is live (`"loaded": true`, even
+  when a later reload failed and `error` says why) and `"failed"` while none is
 - `"main"` in settings means the screen with the menu bar
 - Geometry rounds each **edge** to a whole point (not origin and size), so
   neighbouring windows share an edge: 477.5 / 472.5 becomes x 478, w 472
@@ -349,7 +352,7 @@ Commands that act on a window take an optional `target` object:
 
 | Event | `detail_data` | `data` on success |
 |---|---|---|
-| `status` | — | `{"version", "pid", "accessibility": bool, "layout_mode": bool, "config": {"path", "source", "loaded": bool, "error": string\|null}}` |
+| `status` | — | `{"version", "pid", "accessibility": bool, "layout_mode": bool, "config": {"path", "source", "loaded": bool, "state": "loading"\|"loaded"\|"failed", "error": string\|null}}` |
 | `screens` | — | `{"screens": [screen…]}` |
 | `windows` | `{"app"?, "title"?, "screen"?}` | `{"windows": [window…]}` |
 | `place` | `{"target"?, "placement"?, "rect"?, "region"?, "screen"?}` | `{"window": window}` (after) |

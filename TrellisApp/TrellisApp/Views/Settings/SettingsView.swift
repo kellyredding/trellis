@@ -152,7 +152,7 @@ struct GeneralSettings: View {
 
     private var configStatus: String {
         guard let config = model.configStore.config else {
-            return model.configStore.error == nil ? "loading…" : "not loaded"
+            return model.configStore.state == .loading ? "loading…" : "not loaded"
         }
         let source = config.source == "starter" ? "starter config (no file yet)" : "valid"
         return model.configStore.error == nil ? source : "invalid — keeping the last good config"

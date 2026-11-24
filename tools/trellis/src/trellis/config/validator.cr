@@ -19,6 +19,7 @@ module Trellis
       LABEL_CORNERS    = ["top-left", "top-right", "bottom-left", "bottom-right"]
       CHEAT_SHEETS     = ["off", "label", "dropdown"]
       DROPDOWN_SCREENS = ["off", "all", "main"]
+      CHORD_WAIT_MS    = 50_i64..2000_i64
       LINGER_MS        = 0_i64..3000_i64
 
       def self.validate(tree : JSON::Any, source : Source, path : Path) : Result
@@ -124,7 +125,7 @@ module Trellis
         wait = defaults.chord_wait_ms
         if raw = tree["chord_wait_ms"]?
           int = raw.as_i64?
-          if int && 50 <= int <= 2000
+          if int && CHORD_WAIT_MS.includes?(int)
             wait = int
           else
             error("settings.chord_wait_ms: must be a whole number from 50 to 2000, got #{show(raw)}")

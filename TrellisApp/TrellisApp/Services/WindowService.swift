@@ -13,24 +13,29 @@ struct AXWindow {
 }
 
 /// Reads and moves other apps' windows through the Accessibility API. Every
-/// call blocks on the target app, so callers stay off the main thread.
+/// call blocks on the target app, so callers stay off the main thread, and
+/// callers check `AXIsProcessTrusted()` first: an AX call made while untrusted
+/// can raise the system's Accessibility prompt.
 final class WindowService: @unchecked Sendable {
     private static let acceptedSubroles: Set<String> = [
         "AXStandardWindow", "AXDialog", "AXFloatingWindow", "AXSystemDialog",
     ]
-    private static let messagingTimeout: Float = 1.0
+
+    /// Set on the system-wide element, the timeout covers every element,
+    /// including the window elements an app hands back (default ~6 s).
+    private static let messagingTimeout: Void = {
+        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
+    }()
 
     private let screens: ScreenService
 
     init(screens: ScreenService) {
         self.screens = screens
-        // Set on the system-wide element, the timeout covers every element,
-        // including the window elements an app hands back (default ~6 s).
-        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), Self.messagingTimeout)
     }
 
     /// Every window of every regular app.
     func allWindows() -> [AXWindow] {
+        _ = Self.messagingTimeout
         let focusedID = focusedWindowID()
         let screenList = screens.screens
         var result: [AXWindow] = []
@@ -47,6 +52,7 @@ final class WindowService: @unchecked Sendable {
     }
 
     func focusedWindow() -> AXWindow? {
+        _ = Self.messagingTimeout
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
         guard let element: AXUIElement = Self.attribute(appElement, kAXFocusedWindowAttribute),
