@@ -1,0 +1,19 @@
+# Crystal
+tools/*/build/
+tools/*/lib/
+tools/*/.crystal/
+tools/*/bin/
+tools/*/shard.lock
+
+# Swift / Xcode
+TrellisApp/build/
+TrellisApp/*.xcodeproj/
+TrellisApp/*.xcworkspace/
+TrellisApp/DerivedData/
+*.swp
+
+# Packaging
+dist/
+
+# macOS
+.DS_Store

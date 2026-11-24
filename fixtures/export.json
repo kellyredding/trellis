@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "source": "file",
+  "path": "fixtures/config.yml",
+  "settings": {
+    "leader": "ctrl+s",
+    "chord_wait_ms": 350,
+    "label": { "screens": "main", "corner": "bottom-right" },
+    "cheat_sheet": "off",
+    "dropdown": { "screens": "off" }
+  },
+  "regions": {
+    "gutter": {
+      "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
+      "gap": { "x": 0.005, "y": 0.005 }
+    },
+    "stack": {
+      "margins": { "top": 0, "right": 0.05, "bottom": 0, "left": 0 },
+      "gap": { "x": 0.005, "y": 0.025 }
+    }
+  },
+  "placements": {
+    "left-half": { "rect": { "x": 0, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter" },
+    "right-half": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": "gutter" },
+    "right-half-full": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 1 }, "region": null },
+    "top-right-third": { "rect": { "x": 0.5, "y": 0, "w": 0.5, "h": 0.25 }, "region": "stack" }
+  },
+  "bindings": [
+    { "keys": "ctrl+cmd+h", "chord": ["ctrl+cmd+h"], "target": { "placement": "left-half" }, "prefix": false },
+    { "keys": "h", "chord": ["h"], "target": { "placement": "left-half" }, "prefix": false },
+    { "keys": "l", "chord": ["l"], "target": { "placement": "right-half" }, "prefix": true },
+    { "keys": "l l", "chord": ["l", "l"], "target": { "placement": "right-half-full" }, "prefix": false },
+    { "keys": "right", "chord": ["right"], "target": { "action": "screen-east" }, "prefix": false },
+    { "keys": "t", "chord": ["t"], "target": { "placement": "top-right-third" }, "prefix": false }
+  ],
+  "warnings": [
+    "\"l\" is the start of \"l l\", so it waits before running"
+  ]
+}

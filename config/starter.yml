@@ -1,0 +1,40 @@
+# Trellis starter config: what a fresh install uses until a config file
+# exists. Write it out to edit it: `trellis config init --starter`.
+#
+# Press ⌃S for layout mode, then a chord. Placements are fractions of the
+# screen's visible frame (below the menu bar, beside the Dock):
+# rect: [x, y, width, height].
+
+version: 1
+
+placements:
+  left-half:          { rect: [0, 0, 0.5, 1] }
+  right-half:         { rect: [0.5, 0, 0.5, 1] }
+  top-half:           { rect: [0, 0, 1, 0.5] }
+  bottom-half:        { rect: [0, 0.5, 1, 0.5] }
+  top-left-quarter:   { rect: [0, 0, 0.5, 0.5] }
+  top-right-quarter:  { rect: [0.5, 0, 0.5, 0.5] }
+  bottom-left-quarter:  { rect: [0, 0.5, 0.5, 0.5] }
+  bottom-right-quarter: { rect: [0.5, 0.5, 0.5, 0.5] }
+  left-60:            { rect: [0, 0, 0.6, 1] }
+  right-40:           { rect: [0.6, 0, 0.4, 1] }
+  left-40:            { rect: [0, 0, 0.4, 1] }
+  right-60:           { rect: [0.4, 0, 0.6, 1] }
+  maximize:           { rect: [0, 0, 1, 1] }
+
+bindings:
+  h: left-half
+  l: right-half
+  k: top-half
+  j: bottom-half
+  i: top-left-quarter
+  o: top-right-quarter
+  ",": bottom-left-quarter
+  ".": bottom-right-quarter
+  ctrl+h: left-60
+  ctrl+l: right-40
+  cmd+h: left-40
+  cmd+l: right-60
+  return: maximize
+  right: screen-east
+  left: screen-west

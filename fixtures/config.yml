@@ -1,0 +1,33 @@
+# Contract fixture: exercises defaults, both gap forms, both rect forms,
+# a modifier alias, a prefix chord and a built-in action. The CLI specs
+# assert `trellis config export --json` of this file equals export.json; the
+# app's smoke check decodes export.json. See docs/contract.md.
+
+version: 1
+
+settings:
+  chord_wait_ms: 350
+  label:
+    screens: main
+
+regions:
+  gutter:
+    margins: { right: 0.05 }
+    gap: 0.005
+  stack:
+    margins: { right: 0.05 }
+    gap: { x: 0.005, y: 0.025 }
+
+placements:
+  left-half:       { rect: [0, 0, 0.5, 1], region: gutter }
+  right-half:      { rect: [0.5, 0, 0.5, 1], region: gutter }
+  right-half-full: { rect: { x: 0.5, y: 0, w: 0.5, h: 1 } }
+  top-right-third: { rect: [0.5, 0, 0.5, 0.25], region: stack }
+
+bindings:
+  h: left-half
+  l: right-half
+  "l l": right-half-full
+  t: top-right-third
+  CMD+Ctrl+H: left-half
+  right: screen-east
