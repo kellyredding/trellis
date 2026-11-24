@@ -138,7 +138,7 @@ if let config = fixture {
     check("a prefix binding is flagged", config.bindings[2].prefix && !config.bindings[1].prefix)
     check("a placement target decodes", config.bindings[1].target == .placement("left-half"))
     check("an action target decodes", config.bindings[4].target == .action(.screenEast))
-    check("warnings decode", config.warnings == ["\"l\" is the start of \"l l\", so it waits before running"])
+    check("warnings decode", config.warnings == ["l waits: it starts l l"])
     check("a placement's region resolves", config.region(for: config.placements["left-half"]!) == config.regions["gutter"])
     check("no region resolves to none", config.region(for: config.placements["right-half-full"]!) == Region.none)
     check("groups decode in order", config.groups == ["Halves", "Thirds", "Displays"])
@@ -579,6 +579,36 @@ do {
 } catch {
     check("a missing binary fails to launch", (error as? ProcessRunError).map { if case .launchFailed = $0 { return true }; return false } ?? false)
 }
+
+// MARK: - Reload coalescing
+
+actor RunCounter {
+    private(set) var count = 0
+    func next() -> Int { count += 1; return count }
+}
+
+let quickRuns = RunCounter()
+let quick = ReloadCoalescer(window: 0.05) { await quickRuns.next() }
+async let firstRequest = quick.request()
+async let secondRequest = quick.request()
+async let thirdRequest = quick.request()
+let burst = await [firstRequest, secondRequest, thirdRequest]
+check("requests within the window share one reload", burst == [1, 1, 1])
+let afterBurst = await quick.request()
+check("a request after the window gets its own reload", afterBurst == 2)
+
+let slowRuns = RunCounter()
+let slow = ReloadCoalescer(window: 0.05) { () -> Int in
+    let run = await slowRuns.next()
+    try? await Task.sleep(nanoseconds: 300_000_000)
+    return run
+}
+let running = Task { await slow.request() }
+try? await Task.sleep(nanoseconds: 150_000_000)
+let midReload = await slow.request()
+let runningOutcome = await running.value
+check("a request made mid-reload is answered by the next reload, not the running one",
+      runningOutcome == 1 && midReload == 2)
 
 print("")
 if failures.isEmpty {

@@ -51,11 +51,10 @@ module Trellis
         prefixed = Set(Array(String)).new
         warnings = [] of String
         bindings.each do |shorter|
-          bindings.each do |longer|
-            next unless prefix?(shorter.chord, longer.chord)
-            prefixed << shorter.chord
-            warnings << %("#{shorter.keys}" is the start of "#{longer.keys}", so it waits before running)
-          end
+          longer = bindings.select { |binding| prefix?(shorter.chord, binding.chord) }
+          next if longer.empty?
+          prefixed << shorter.chord
+          warnings << "#{shorter.keys} waits: it starts #{longer.join(", ", &.keys)}"
         end
         bindings = bindings.map { |binding| binding.copy_with(prefix: prefixed.includes?(binding.chord)) }
 

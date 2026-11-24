@@ -107,7 +107,23 @@ describe "trellis config" do
       result = SpecHelper.run(sandbox, ["config", "validate"],
         {"TRELLIS_CONFIG" => (SpecHelper::FIXTURES / "config.json").to_s})
       result.exit_code.should eq(0)
-      result.stdout.should contain(%(warning: "l" is the start of "l l", so it waits before running))
+      result.stdout.should contain("warning: l waits: it starts l l\n")
+    end
+  end
+
+  it "collapses the prefix warnings to one line per waiting chord in validate and doctor" do
+    SpecHelper.sandbox do |sandbox|
+      bindings = ["h", "h t", "h b", "h k", "h g", "h j", "h h"].map { |keys| %("#{keys}": "left-half") }
+      sandbox.write_config(GUTTER_CONFIG.sub(%("h": "left-half"), bindings.join(",\n")))
+
+      validate = SpecHelper.run(sandbox, ["config", "validate"])
+      validate.exit_code.should eq(0)
+      validate.stdout.lines.count(&.starts_with?("warning: ")).should eq(1)
+      validate.stdout.should contain("warning: h waits: it starts h b, h g, h h, h j, h k, h t\n")
+
+      doctor = SpecHelper.run(sandbox, ["doctor"])
+      doctor.stdout.lines.count(&.matches?(/\Awarn\s+config\s/)).should eq(1)
+      doctor.stdout.should match(/warn\s+config\s+h waits: it starts h b, h g, h h, h j, h k, h t\n/)
     end
   end
 
@@ -164,7 +180,7 @@ describe "config mutations" do
       export = SpecHelper.run(sandbox, ["config", "export", "--json"]).json
       export["source"].should eq("file")
       export["bindings"].as_a.size.should eq(16)
-      export["warnings"].as_a.map(&.as_s).should eq([%("l" is the start of "l l", so it waits before running)])
+      export["warnings"].as_a.map(&.as_s).should eq(["l waits: it starts l l"])
     end
   end
 

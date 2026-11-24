@@ -78,9 +78,13 @@ struct SettingsCard<Content: View>: View {
 }
 
 enum SettingsMetrics {
-    /// Wide enough for four binding tiles in a row, so the starter's groups
-    /// each fit on one line beside the scroller.
-    static let windowWidth: CGFloat = 660
+    static let tileWidth: CGFloat = 124
+    static let tileSpacing: CGFloat = 8
+    static let tilesPerRow = 5
+    /// Every tab shares the Bindings tab's width: a row of tiles, the card's
+    /// and window's padding, and room for a legacy scroller.
+    static let windowWidth: CGFloat =
+        CGFloat(tilesPerRow) * tileWidth + CGFloat(tilesPerRow - 1) * tileSpacing + 2 * 12 + 2 * 18 + 16
     /// Every popup and slider takes this width, so they share both edges.
     static let controlWidth: CGFloat = 220
     static let readoutWidth: CGFloat = 64

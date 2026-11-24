@@ -17,7 +17,9 @@ final class ConfigStore: ObservableObject {
     private let cli: CLIRunner
     private var watcher: FileWatcher?
     private var watchedDirectories: [String] = []
-    private var current: Task<ReloadData, Never>?
+    /// One write reaches the app as the CLI's `config.reload` and one or more
+    /// file events; the window folds them into a single load.
+    private lazy var reloads = ReloadCoalescer(window: 0.25) { [unowned self] in await self.load() }
 
     init(paths: TrellisPaths, cli: CLIRunner) {
         self.paths = paths
@@ -32,17 +34,9 @@ final class ConfigStore: ObservableObject {
         Task { await reload() }
     }
 
-    /// Reloads run one after another, so a burst (the CLI's `config.reload`
-    /// and the file event for the same write) never races.
     @discardableResult
     func reload() async -> ReloadData {
-        let previous = current
-        let task = Task { @MainActor () -> ReloadData in
-            _ = await previous?.value
-            return await self.load()
-        }
-        current = task
-        return await task.value
+        await reloads.request()
     }
 
     private func load() async -> ReloadData {

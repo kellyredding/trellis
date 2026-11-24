@@ -4,11 +4,13 @@ module Trellis
   module Format
     extend self
 
+    TITLE_LIMIT = 60
+
     def window(window : JSON::Any) : String
       parts = [
         field(window, "id").ljust(7),
         field(window, "app"),
-        field(window, "title").inspect,
+        truncate(field(window, "title"), TITLE_LIMIT).inspect,
         "screen #{field(window, "screen")}",
         frame(window["frame"]?),
       ]
@@ -51,6 +53,11 @@ module Trellis
       else
         "not loaded, and the app gave no reason"
       end
+    end
+
+    def truncate(text : String, limit : Int32) : String
+      return text if text.size <= limit
+      "#{text[0, limit - 1].rstrip}…"
     end
 
     def field(object : JSON::Any, key : String) : String

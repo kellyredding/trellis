@@ -191,9 +191,10 @@ existing order, arrays of plain values on one line, and a trailing newline.
   e.g. ``placements.left-40: no group; set one with `trellis placements set
   left-40 --group NAME` ``.
 - A chord that is also the prefix of a longer chord is a **warning**, not an
-  error: it is valid, and it waits. One warning per (prefix, longer chord)
-  pair, worded exactly `"<prefix>" is the start of "<longer>", so it waits
-  before running`, sorted by prefix then longer chord.
+  error: it is valid, and it waits. One warning per waiting chord, worded
+  exactly `<prefix> waits: it starts <longer>, <longer>, …` (canonical
+  chords, the longer ones comma-separated), sorted by prefix and then by
+  longer chord.
 - A group no placement or action uses is a **warning**, after the prefix
   warnings and in `groups` order: ``group "<name>" is not used by any
   placement or action; use it with `trellis placements set NAME --group

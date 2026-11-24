@@ -266,7 +266,7 @@ describe Trellis::Config::Validator do
   end
 
   describe "prefix warnings" do
-    it "warns once per pair, worded exactly, sorted by prefix then longer chord" do
+    it "warns once per waiting chord, worded exactly, listing the chords it starts in order" do
       result = SpecHelper.validate(acting(<<-JSON))
           "bindings": {
             "l l": "screen-east",
@@ -279,12 +279,10 @@ describe Trellis::Config::Validator do
         JSON
       result.errors.should be_empty
       result.warnings.should eq([
-        %("a" is the start of "a b", so it waits before running),
-        %("a" is the start of "a b c", so it waits before running),
-        %("a b" is the start of "a b c", so it waits before running),
-        %("l" is the start of "l l", so it waits before running),
-        %("l" is the start of "l l x", so it waits before running),
-        %("l l" is the start of "l l x", so it waits before running),
+        "a waits: it starts a b, a b c",
+        "a b waits: it starts a b c",
+        "l waits: it starts l l, l l x",
+        "l l waits: it starts l l x",
       ])
       result.model!.bindings.select(&.prefix).map(&.keys).should eq(["a", "a b", "l", "l l"])
     end

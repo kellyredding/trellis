@@ -11,8 +11,10 @@ module Trellis
         Reports the CLI version; the config path, where its symlink resolves,
         whether it is a file or the built-in starter, and whether it is valid
         JSON and a valid config;
-        and whether the app answers, its version and its Accessibility grant.
-        Exits 1 when a check fails. The app not running is a warning.
+        and whether the app answers, its version, its Accessibility grant and
+        whether its last config reload worked.
+        Exits 1 when a check fails. The app not running, or keeping its last
+        good config after a failed reload, is a warning.
         TEXT
 
       enum Level
@@ -131,7 +133,12 @@ module Trellis
 
         app_config = status["config"]?
         if app_config && app_config["loaded"]?.try(&.as_bool?)
-          checks << Check.new(Level::Ok, "app config", "loaded")
+          if error = app_config["error"]?.try(&.as_s?)
+            checks << Check.new(Level::Warn, "app config",
+              "keeping the last good config; the last reload failed: #{error.lines.map(&.strip).reject(&.empty?).join("; ")}")
+          else
+            checks << Check.new(Level::Ok, "app config", "loaded")
+          end
         else
           checks << Check.new(Level::Warn, "app config", app_config.try { |config| Format.app_config(config) } || "not reported")
         end

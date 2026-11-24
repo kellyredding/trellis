@@ -49,7 +49,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             menu.addItem(action("Open System Settings…", #selector(requestAccessibility)))
         }
         if let error = model.configStore.error {
-            let line = disabled("Config error — keeping the last good config: \(error)")
+            let line = action("Config error — keeping the last good config", #selector(openGeneralSettings))
             line.toolTip = error
             menu.addItem(line)
         }
@@ -128,6 +128,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     @objc private func openSettings() { PreferencesWindowController.show(model: model) }
+
+    @objc private func openGeneralSettings() { PreferencesWindowController.show(model: model, tab: .general) }
 
     @objc private func quit() { NSApp.terminate(nil) }
 }

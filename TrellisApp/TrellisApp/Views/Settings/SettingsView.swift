@@ -4,13 +4,13 @@ import SwiftUI
 /// `trellis settings set KEY VALUE`; the CLI is the only writer of the config.
 struct SettingsView: View {
     @ObservedObject var model: AppModel
-    @State private var selected: SettingsTab = .general
+    @ObservedObject var navigation: SettingsNavigation
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 ForEach(SettingsTab.allCases, id: \.self) { tab in
-                    SettingsTabButton(tab: tab, isSelected: selected == tab) { selected = tab }
+                    SettingsTabButton(tab: tab, isSelected: navigation.selected == tab) { navigation.selected = tab }
                 }
             }
             .padding(.horizontal, 16)
@@ -20,7 +20,7 @@ struct SettingsView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 18) {
-                switch selected {
+                switch navigation.selected {
                 case .general: GeneralSettings(model: model)
                 case .layoutMode: LayoutModeSettings(model: model)
                 case .bindings: BindingsSettings(model: model)
@@ -234,40 +234,62 @@ struct LayoutModeSettings: View {
 
 // MARK: - Bindings
 
+/// The tab grows with its bindings, up to the screen's height; only a config
+/// taller than that scrolls.
 struct BindingsSettings: View {
     @ObservedObject var model: AppModel
+    @State private var contentHeight: CGFloat = 0
+
+    private let columns = Array(
+        repeating: GridItem(.fixed(SettingsMetrics.tileWidth), spacing: SettingsMetrics.tileSpacing, alignment: .top),
+        count: SettingsMetrics.tilesPerRow
+    )
 
     var body: some View {
         if let config = model.configStore.config {
             SettingsCard(title: "Bindings (\(config.bindings.count))") {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(config.bindingSections, id: \.group) { section in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(section.group)
-                                    .font(.system(size: 12, weight: .semibold))
-                                FlowLayout(spacing: 8) {
-                                    ForEach(section.bindings, id: \.keys) { binding in
-                                        BindingTile(binding: binding, config: config)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    sections(config)
+                        .background(GeometryReader { proxy in
+                            Color.clear.preference(key: BindingsHeightKey.self, value: proxy.size.height)
+                        })
                 }
-                .frame(height: 420)
-            }
-            if !config.warnings.isEmpty {
-                SettingsCard(title: "Warnings") {
-                    ForEach(config.warnings, id: \.self) { SettingsCaption($0, color: .orange) }
-                }
+                .frame(height: min(contentHeight, Self.maxHeight))
+                .onPreferenceChange(BindingsHeightKey.self) { contentHeight = $0 }
             }
             SettingsCaption("Bindings are read-only here. Change them with `trellis bind` or by asking an agent.")
         } else {
             SettingsCaption(model.configStore.error ?? "No config is loaded yet.")
         }
     }
+
+    private func sections(_ config: TrellisConfig) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(config.bindingSections, id: \.group) { section in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(section.group)
+                        .font(.system(size: 12, weight: .semibold))
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: SettingsMetrics.tileSpacing) {
+                        ForEach(section.bindings, id: \.keys) { binding in
+                            BindingTile(binding: binding, config: config)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The screen's visible height less the window's title bar, tab bar,
+    /// padding, card title and caption, and a margin.
+    @MainActor private static var maxHeight: CGFloat {
+        max(200, (NSScreen.main?.visibleFrame.height ?? 800) - 260)
+    }
+}
+
+private struct BindingsHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 /// One binding: its chord, what it does to a window, and its target's name.
@@ -275,13 +297,11 @@ struct BindingTile: View {
     let binding: ChordBinding
     let config: TrellisConfig
 
-    static let width: CGFloat = 136
-
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             HStack(spacing: 4) {
                 Text(KeyToken.chordDisplay(binding.tokens))
-                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
                     .lineLimit(1)
                     .help(binding.keys)
                 if binding.prefix {
@@ -300,47 +320,10 @@ struct BindingTile: View {
                 .truncationMode(.middle)
                 .help(binding.target.description)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .padding(.horizontal, 6)
-        .frame(width: Self.width)
+        .frame(width: SettingsMetrics.tileWidth)
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
-    }
-}
-
-/// Lays its views out left to right, starting a new row only when the next
-/// one would not fit.
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let frames = arrange(subviews, width: proposal.width ?? .infinity)
-        return CGSize(width: frames.map(\.maxX).max() ?? 0, height: frames.map(\.maxY).max() ?? 0)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (subview, frame) in zip(subviews, arrange(subviews, width: bounds.width)) {
-            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
-                          proposal: ProposedViewSize(frame.size))
-        }
-    }
-
-    private func arrange(_ subviews: Subviews, width: CGFloat) -> [CGRect] {
-        var frames: [CGRect] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            frames.append(CGRect(origin: CGPoint(x: x, y: y), size: size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        return frames
     }
 }
 

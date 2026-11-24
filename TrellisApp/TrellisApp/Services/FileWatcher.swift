@@ -22,12 +22,14 @@ final class FileWatcher {
             let array = Unmanaged<CFArray>.fromOpaque(paths).takeUnretainedValue() as? [String] ?? []
             watcher.onChange(Array(array.prefix(count)))
         }
+        // The latency stays under ConfigStore's reload window, so the event for
+        // a CLI write joins the reload the CLI's own `config.reload` asked for.
         let flags = FSEventStreamCreateFlags(
             kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents
         )
         guard let stream = FSEventStreamCreate(
             kCFAllocatorDefault, callback, &context, directories as CFArray,
-            FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.3, flags
+            FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.1, flags
         ) else { return nil }
         self.stream = stream
         FSEventStreamSetDispatchQueue(stream, DispatchQueue.main)

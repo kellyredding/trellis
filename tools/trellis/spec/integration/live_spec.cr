@@ -93,6 +93,34 @@ describe "live commands" do
     end
   end
 
+  it "cuts long titles to 60 characters in text, and keeps them whole with --json" do
+    SpecHelper.sandbox do |sandbox|
+      title = "A browser tab whose title runs on " + "and on " * 20
+      long = WINDOW.sub("kx — zsh", title)
+      cut = "\"#{title[0, 59].rstrip}…\""
+      replies = {
+        "windows"     => ok(%({"windows": [#{long}]})),
+        "place"       => ok(%({"window": #{long}})),
+        "screen.move" => %({"ok": false, "error": "2 windows match", "code": "ambiguous", "candidates": [#{long}, #{WINDOW}]}),
+      }
+      SpecHelper.with_app(sandbox, replies) do |app|
+        windows = SpecHelper.run_live(sandbox, app, ["windows"])
+        windows.stdout.should contain(cut)
+        windows.stdout.should_not contain(title)
+        SpecHelper.run_live(sandbox, app, ["windows", "--json"]).json["windows"][0]["title"].should eq(title)
+
+        SpecHelper.run_live(sandbox, app, ["place", "maximize"]).stdout.should match(/\Aplaced: 4211\s+Ghostty  #{Regex.escape(cut)}  screen 1/)
+
+        ambiguous = SpecHelper.run_live(sandbox, app, ["screen", "east", "--app", "Ghostty"])
+        ambiguous.exit_code.should eq(5)
+        ambiguous.stderr.should contain(cut)
+        ambiguous.stderr.should contain("\"kx — zsh\"")
+        SpecHelper.run_live(sandbox, app, ["screen", "east", "--app", "Ghostty", "--json"])
+          .json["candidates"][0]["title"].should eq(title)
+      end
+    end
+  end
+
   it "place sends a placement with a target and a screen" do
     SpecHelper.sandbox do |sandbox|
       SpecHelper.with_app(sandbox, {"place" => ok(%({"window": #{WINDOW}}))}) do |app|
@@ -274,6 +302,38 @@ describe "trellis doctor" do
         result.exit_code.should eq(1)
         result.stdout.should match(/warn\s+app\s+running, version 0\.0\.9; this CLI is #{Regex.escape(Trellis::VERSION)}/)
         result.stdout.should match(/FAIL\s+accessibility\s+not granted/)
+      end
+    end
+  end
+
+  it "warns when the app kept its last good config after a failed reload" do
+    SpecHelper.sandbox do |sandbox|
+      error = "trellis: the config is invalid\\n  settings.label.linger_ms: must be a whole number from 0 to 3000, got 9000\\n"
+      status = ok(%({"version": "#{Trellis::VERSION}", "pid": 99, "accessibility": true, "layout_mode": false, ) +
+                  %("config": {"path": "/x", "source": "file", "loaded": true, "state": "loaded", "error": "#{error}"}}))
+      SpecHelper.with_app(sandbox, {"status" => status}) do |app|
+        result = SpecHelper.run_live(sandbox, app, ["doctor"])
+        result.exit_code.should eq(0)
+        result.stdout.should match(/warn\s+app config\s+keeping the last good config; the last reload failed: trellis: /)
+        result.stdout.should contain(
+          "the config is invalid; settings.label.linger_ms: must be a whole number from 0 to 3000, got 9000\n")
+
+        json = SpecHelper.run_live(sandbox, app, ["doctor", "--json"])
+        json.exit_code.should eq(0)
+        check = json.json["checks"].as_a.find! { |item| item["name"] == "app config" }
+        check["level"].should eq("warn")
+      end
+    end
+  end
+
+  it "reports the app's config as ok when its last load worked" do
+    SpecHelper.sandbox do |sandbox|
+      status = ok(%({"version": "#{Trellis::VERSION}", "pid": 99, "accessibility": true, "layout_mode": false, ) +
+                  %("config": {"path": "/x", "source": "file", "loaded": true, "state": "loaded", "error": null}}))
+      SpecHelper.with_app(sandbox, {"status" => status}) do |app|
+        result = SpecHelper.run_live(sandbox, app, ["doctor"])
+        result.exit_code.should eq(0)
+        result.stdout.should match(/ok\s+app config\s+loaded\n/)
       end
     end
   end

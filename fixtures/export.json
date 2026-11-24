@@ -38,6 +38,6 @@
     { "keys": "t", "chord": ["t"], "target": { "placement": "top-right-third" }, "group": "Thirds", "prefix": false }
   ],
   "warnings": [
-    "\"l\" is the start of \"l l\", so it waits before running"
+    "l waits: it starts l l"
   ]
 }
