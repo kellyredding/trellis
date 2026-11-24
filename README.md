@@ -1,4 +1,7 @@
-# Trellis
+<h1 align="center">
+  <img src="TrellisApp/TrellisApp/Assets.xcassets/AppIcon.appiconset/icon_256.png" width="128" height="128" alt=""><br>
+  Trellis
+</h1>
 
 Keyboard window layout for macOS, with a CLI built for agents.
 
