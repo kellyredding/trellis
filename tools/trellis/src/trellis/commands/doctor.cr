@@ -8,13 +8,14 @@ module Trellis
       HELP = <<-TEXT
         trellis doctor — check the CLI, the config and the app
 
-        Reports the CLI version; the config path, where its symlink resolves,
-        whether it is a file or the built-in starter, and whether it is valid
-        JSON and a valid config;
-        and whether the app answers, its version, its Accessibility grant and
+        Reports the CLI version; the install record install.sh leaves at
+        ~/.trellis/installed-manifest.json (version, commit, build time, signer);
+        the config path, where its symlink resolves, whether it is a file or the
+        built-in starter, and whether it is valid JSON and a valid config; and
+        whether the app answers, its version, its Accessibility grant and
         whether its last config reload worked.
-        Exits 1 when a check fails. The app not running, or keeping its last
-        good config after a failed reload, is a warning.
+        Exits 1 when a check fails. No install record, the app not running, or
+        the app keeping its last good config after a failed reload, is a warning.
         TEXT
 
       enum Level
@@ -47,6 +48,7 @@ module Trellis
         args.at_most(0)
 
         checks = [Check.new(Level::Ok, "cli", "trellis #{VERSION}")]
+        install = install_checks(checks)
         config = config_checks(checks)
         app = app_checks(checks)
 
@@ -55,6 +57,7 @@ module Trellis
             json.object do
               json.field "ok", checks.none?(&.level.fail?)
               json.field("cli") { json.object { json.field "version", VERSION } }
+              json.field("install") { install.call(json) }
               json.field("config") { config.call(json) }
               json.field("app") { app.call(json) }
               json.field "checks", checks
@@ -68,6 +71,49 @@ module Trellis
         end
 
         checks.any?(&.level.fail?) ? ExitCode::FAILED : ExitCode::OK
+      end
+
+      def installed_manifest : Path
+        Paths.root / "installed-manifest.json"
+      end
+
+      # The manifest install.sh copied out of the archive it installed.
+      private def install_checks(checks : Array(Check)) : Proc(JSON::Builder, Nil)
+        path = installed_manifest
+        manifest = read_manifest(path)
+        if manifest
+          checks << Check.new(Level::Ok, "install", describe_install(manifest))
+        else
+          problem = File.exists?(path) ? "unreadable install record at #{path}" : "no install record at #{path}"
+          checks << Check.new(Level::Warn, "install", "#{problem}; `trellis update` installs a release and writes one")
+        end
+
+        ->(json : JSON::Builder) do
+          json.object do
+            json.field "manifest_path", path.to_s
+            json.field "manifest", manifest
+          end
+          nil
+        end
+      end
+
+      private def read_manifest(path : Path) : JSON::Any?
+        return nil unless File.file?(path)
+        manifest = JSON.parse(File.read(path))
+        manifest.as_h? ? manifest : nil
+      rescue JSON::ParseException | File::Error
+        nil
+      end
+
+      private def describe_install(manifest : JSON::Any) : String
+        field = ->(name : String) { manifest[name]?.try(&.as_s?) }
+        build = [field.call("commit") || "unknown commit"]
+        build << "uncommitted changes" if manifest["dirty"]?.try(&.as_bool?)
+        detail = "Trellis #{field.call("version") || "unknown"} (#{build.join(", ")})"
+        field.call("built_at").try { |built| detail += ", built #{built}" }
+        signer = field.call("signer")
+        detail += signer ? ", signed by #{signer}" : ", signer not recorded"
+        detail
       end
 
       private def config_checks(checks : Array(Check)) : Proc(JSON::Builder, Nil)

@@ -284,6 +284,42 @@ describe "trellis doctor" do
     end
   end
 
+  it "reports the install record install.sh wrote" do
+    SpecHelper.sandbox do |sandbox|
+      File.write(sandbox.root / "installed-manifest.json", <<-JSON)
+        {
+          "version": "0.1.0",
+          "commit": "abc123def456",
+          "dirty": true,
+          "built_at": "2026-11-24T10:00:00Z",
+          "signing": "op",
+          "signer": "Trellis Release Signing",
+          "trellis_sha256": "00"
+        }
+        JSON
+      result = SpecHelper.run(sandbox, ["doctor"])
+      result.exit_code.should eq(0)
+      result.stdout.should match(/^ok\s+install\s+Trellis 0\.1\.0 \(abc123def456, uncommitted changes\), built /m)
+      result.stdout.should contain("built 2026-11-24T10:00:00Z, signed by Trellis Release Signing\n")
+
+      json = SpecHelper.run(sandbox, ["doctor", "--json"]).json
+      json["install"]["manifest_path"].should eq((sandbox.root / "installed-manifest.json").to_s)
+      json["install"]["manifest"]["commit"].should eq("abc123def456")
+    end
+  end
+
+  it "warns, without failing, when there is no install record or it is unreadable" do
+    SpecHelper.sandbox do |sandbox|
+      result = SpecHelper.run(sandbox, ["doctor"])
+      result.exit_code.should eq(0)
+      result.stdout.should match(/^warn\s+install\s+no install record at .*installed-manifest\.json; `trellis update`/m)
+      SpecHelper.run(sandbox, ["doctor", "--json"]).json["install"]["manifest"].raw.should be_nil
+
+      File.write(sandbox.root / "installed-manifest.json", "{")
+      SpecHelper.run(sandbox, ["doctor"]).stdout.should match(/^warn\s+install\s+unreadable install record/m)
+    end
+  end
+
   it "fails on an invalid config" do
     SpecHelper.sandbox do |sandbox|
       sandbox.write_config("version: 2\n")

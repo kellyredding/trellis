@@ -226,7 +226,7 @@ if $first_app; then
   say "Open Trellis with: open \"$APP\""
   say "It asks for the Accessibility permission on first launch; grant it in System Settings."
 else
-  say "Restart Trellis when you're ready to switch to the new version."
+  say "A running Trellis keeps the old build until you restart it; restart it when you're ready to switch."
 fi
 exit 0
 }

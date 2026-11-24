@@ -10,6 +10,12 @@ module Trellis
         ExitCode::OK
       end
 
+      # A child's status as a shell would report it. `exit_code` raises for a
+      # child a signal ended, so that is 128 plus the signal.
+      def exit_code_for(status : Process::Status) : Int32
+        status.exit_code? || status.exit_signal?.try { |signal| 128 + signal.value } || ExitCode::FAILED
+      end
+
       def print_json(&block : JSON::Builder ->) : Nil
         STDOUT.puts JSON.build(indent: "  ") { |json| block.call(json) }
       end

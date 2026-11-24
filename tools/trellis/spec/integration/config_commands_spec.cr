@@ -42,16 +42,6 @@ describe "trellis version" do
   end
 end
 
-describe "trellis update" do
-  it "says updates come with release packaging and exits 1" do
-    SpecHelper.sandbox do |sandbox|
-      result = SpecHelper.run(sandbox, ["update"])
-      result.exit_code.should eq(1)
-      result.stderr.should contain("release packaging")
-    end
-  end
-end
-
 describe "usage errors" do
   it "exit 2" do
     SpecHelper.sandbox do |sandbox|

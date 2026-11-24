@@ -38,8 +38,20 @@ curl -fsSL https://raw.githubusercontent.com/kellyredding/trellis/main/install.s
 Apple Silicon and the current macOS only. On first launch, grant Trellis
 Accessibility permission in System Settings → Privacy & Security.
 
-Then `trellis doctor` reports the install, and `trellis update` moves to a
-newer release.
+Then `trellis doctor` reports the install, including the release it came from.
+
+## Update
+
+```bash
+trellis update                   # the latest release
+trellis update --version 0.1.0   # a particular release
+trellis update --preview         # what would change, changing nothing
+```
+
+An update replaces `~/.trellis/bin/trellis` and `~/Applications/Trellis.app`
+and never restarts the app: a running Trellis keeps the old build until you
+restart it. The Accessibility permission carries over, because every release
+is signed with the same identity.
 
 ## Using the CLI
 
@@ -52,7 +64,7 @@ trellis bind c centred               # ⌃S c now centres the focused window
 trellis resolve "l l"                # what a chord does, and whether it waits
 ```
 
-Every command takes `--json`.
+Every command except `update` takes `--json`.
 
 ## Config
 
@@ -89,6 +101,13 @@ make icon        # redraw the app icon
 ```
 
 `make check` does not build the app; a change touching both needs both.
+
+`trellis update --local [PATH]` installs a checkout, uncommitted changes
+included: it runs that checkout's `bin/package --local`, then its
+`install.sh --from` on the archive. Packaging signs with the release
+identity from 1Password, and `install.sh` refuses anything signed otherwise,
+so an ad-hoc build never replaces an installed Trellis.
+
 Releases are built and published from a Mac with `bin/release`; see
 `release-notes/`.
 

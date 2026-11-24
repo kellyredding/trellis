@@ -19,8 +19,8 @@ config from `config/starter.json`, both read at compile time.
 
 ## Commands
 
-Every command takes `--json`. On failure the message goes to stderr, and
-with `--json` the failure is also printed on stdout as
+Every command except `update` takes `--json`. On failure the message goes to
+stderr, and with `--json` the failure is also printed on stdout as
 `{"ok": false, "error", "code", …}`.
 
 **Live** (need the app): `status`, `screens`, `windows`, `place`,
@@ -36,10 +36,22 @@ and a built-in action needs one (`actions set screen-east --group G`) before a
 chord can be bound to it. `groups list|add|rename|remove|move` manages the
 ordered list; `bindings list` prints the bindings under their groups.
 
-**Health:** `doctor`, `version`, `update` (not available until release
-packaging exists).
+**Health:** `doctor`, `version`, `update`. `doctor` also reports the install
+record `install.sh` leaves at `~/.trellis/installed-manifest.json`.
 
 Run `trellis <command> --help` for each command's options.
+
+## Updating
+
+`trellis update` downloads `install.sh` from the repository's `main` branch
+and runs it, which installs the latest GitHub release; `--version X.Y.Z`
+installs that release, and `--preview` and `--force` pass through to
+`install.sh`. `trellis update --local [PATH]` packages a checkout (PATH, else
+the repository the working directory is in) with its `bin/package --local`,
+which signs through 1Password, and installs the archive with that checkout's
+`install.sh --from`. Neither restarts the app; a running Trellis keeps the
+old build until it is restarted. `update` has no `--json` output, and when
+the installer or the packager fails it exits with that program's exit code.
 
 ## Exit codes
 

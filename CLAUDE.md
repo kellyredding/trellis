@@ -47,7 +47,7 @@ make app-check   # app: build + smoke
 
 macOS ties the Accessibility grant to the app's signature. **Never sign ad
 hoc** for anything installed. Development installs go through the signed
-package path (`trellis update --local` once packaging exists), not a symlink
+package path (`trellis update --local`), not a symlink
 to an Xcode build, or each rebuild can silently revoke the grant and ⌃S stops
 working with no error.
 

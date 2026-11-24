@@ -5,7 +5,7 @@ module Trellis
     USAGE = <<-TEXT
       trellis — keyboard window layout for macOS
 
-      Usage: trellis <command> [options]      (every command takes --json)
+      Usage: trellis <command> [options]      (every command but update takes --json)
 
       Live (talk to the Trellis app):
         status                          App version, Accessibility, layout mode, config
@@ -33,9 +33,10 @@ module Trellis
         settings list|get KEY|set KEY VALUE
 
       Health:
-        doctor                          Check the CLI, the config and the app
+        doctor                          Check the install, the config and the app
         version                         Print the version
-        update                          Install the latest release
+        update [--version X.Y.Z]        Install the latest release, or that one
+        update --local [PATH]           Package and install a Trellis checkout
 
       Exit codes: 0 ok, 1 failed, 2 usage, 3 app not running,
       4 Accessibility not granted, 5 window or screen not found or ambiguous.

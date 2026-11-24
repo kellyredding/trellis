@@ -136,6 +136,30 @@ module SpecHelper
     run(sandbox, args, app.env, chdir: sandbox.root.to_s)
   end
 
+  def write_executable(path : Path, body : String) : Path
+    Dir.mkdir_p(path.parent)
+    File.write(path, body)
+    File.chmod(path, 0o755)
+    path
+  end
+
+  # A git repository shaped like a Trellis checkout, whose bin/package and
+  # install.sh are the given stand-ins, so `update --local` never signs or
+  # installs anything. With `trellis: false` it lacks TrellisApp/project.yml.
+  def checkout(sandbox : Sandbox, package : String = "#!/bin/sh\n", install : String = "#!/bin/sh\n",
+               trellis : Bool = true) : Path
+    root = sandbox.root / "checkout"
+    Dir.mkdir_p(root / "tools")
+    Process.run("git", ["init", "-q", root.to_s]).success?.should be_true
+    write_executable(root / "bin" / "package", package)
+    write_executable(root / "install.sh", install)
+    if trellis
+      Dir.mkdir_p(root / "TrellisApp")
+      File.write(root / "TrellisApp" / "project.yml", "name: Trellis\n")
+    end
+    root
+  end
+
   # JSON values with every number as a Float64, so `0` equals `0.0`.
   def normalize(value : JSON::Any) : JSON::Any
     case raw = value.raw
