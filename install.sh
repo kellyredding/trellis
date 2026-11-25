@@ -20,9 +20,12 @@
 set -euo pipefail
 
 REPO="kellyredding/trellis"
-ASSET="trellis-darwin-arm64.tar.gz"
+ASSET="trellis-darwin.tar.gz"
 IDENTITY="Trellis Release Signing"
-MIN_MACOS=26
+MIN_MACOS=15
+# Releases before 0.2.1 were Apple Silicon only, for macOS 26, under this name.
+LEGACY_ASSET="trellis-darwin-arm64.tar.gz"
+LEGACY_VERSIONS=" 0.1.0 0.2.0 "
 TRELLIS_HOME="${TRELLIS_ROOT:-$HOME/.trellis}"
 BIN_DIR="$TRELLIS_HOME/bin"
 LOCAL_BIN="$HOME/.local/bin"
@@ -63,10 +66,15 @@ die() { printf '%sinstall.sh: %s%s\n' "$RED" "$*" "$NC" >&2; exit 1; }
 
 # --- This Mac ----------------------------------------------------------------
 
-[[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]] \
-  || die "Trellis releases are built for Apple Silicon Macs only; this is $(uname -s) on $(uname -m)."
+[[ "$(uname -s)" == "Darwin" ]] || die "Trellis runs on macOS only; this is $(uname -s)."
+if [[ -n "$version" && "$LEGACY_VERSIONS" == *" $version "* ]]; then
+  ASSET="$LEGACY_ASSET"
+  MIN_MACOS=26
+  [[ "$(uname -m)" == "arm64" ]] \
+    || die "Trellis $version was built for Apple Silicon Macs only; this Mac is $(uname -m). Install 0.2.1 or later."
+fi
 macos="$(sw_vers -productVersion)"
-(( ${macos%%.*} >= MIN_MACOS )) || die "Trellis needs macOS $MIN_MACOS or later; this Mac runs $macos."
+(( ${macos%%.*} >= MIN_MACOS )) || die "Trellis${version:+ $version} needs macOS $MIN_MACOS or later; this Mac runs $macos."
 
 work="$(mktemp -d)"
 installed_ok=false

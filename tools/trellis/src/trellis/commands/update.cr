@@ -6,7 +6,7 @@ module Trellis
       extend self
 
       INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/kellyredding/trellis/main/install.sh"
-      ARCHIVE            = "trellis-darwin-arm64.tar.gz"
+      ARCHIVE            = "trellis-darwin.tar.gz"
       SWITCHES           = ["--local", "--preview", "--force"]
 
       HELP = <<-TEXT

@@ -24,7 +24,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="kellyredding/trellis"
-ASSET="trellis-darwin-arm64.tar.gz"
+ASSET="trellis-darwin.tar.gz"
 IDENTITY="Trellis Release Signing"
 APP_ID="com.kellyredding.Trellis"
 BINARY_ID="com.kellyredding.trellis"
@@ -160,9 +160,15 @@ manifest="$(cat "$pkg/manifest.json")"
 # The last word, so "trellis 1.2.3" and a bare "1.2.3" both read as 1.2.3.
 have="$("$pkg/bin/trellis" --version </dev/null)" || die "bin/trellis --version failed"
 [[ "${have##* }" == "$version" ]] || die "trellis reports '$have', not $version"
-libs="$(otool -L "$pkg/bin/trellis")"
+libs="$(otool -arch all -L "$pkg/bin/trellis")"
 [[ "$libs" != *"/opt/homebrew/"* && "$libs" != *"/usr/local/"* ]] \
   || die "trellis links a library outside the system:"$'\n'"$libs"
+for executable in "$pkg/bin/trellis" "$pkg/Trellis.app/Contents/MacOS/Trellis"; do
+  for arch in arm64 x86_64; do
+    lipo "$executable" -verify_arch "$arch" \
+      || die "$(basename "$executable") has no $arch code; a release is universal"
+  done
+done
 app_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$pkg/Trellis.app/Contents/Info.plist")"
 [[ "$app_version" == "$version" ]] || die "Trellis.app says it is $app_version, not $version"
 for target in "$pkg/Trellis.app=$APP_ID" "$pkg/bin/trellis=$BINARY_ID"; do
@@ -191,7 +197,7 @@ notes="$verify/notes.md"
   echo
   echo "Update an existing install with \`trellis update\`."
   echo
-  echo "Apple Silicon, macOS 26 or later. Download with the script, not a browser:"
+  echo "macOS 15 or later, on Apple Silicon or Intel. Download with the script, not a browser:"
   echo "the app is self-signed, and macOS blocks a browser download of it."
   echo
   echo "## What's new"

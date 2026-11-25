@@ -35,7 +35,7 @@ and add the binding you liked.
 curl -fsSL https://raw.githubusercontent.com/kellyredding/trellis/main/install.sh | bash
 ```
 
-Apple Silicon and the current macOS only. On first launch, grant Trellis
+macOS 15 or later, on Apple Silicon or Intel. On first launch, grant Trellis
 Accessibility permission in System Settings → Privacy & Security.
 
 Then `trellis doctor` reports the install, including the release it came from.

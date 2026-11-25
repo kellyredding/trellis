@@ -2,7 +2,9 @@ name: TrellisApp
 options:
   bundleIdPrefix: com.kellyredding
   deploymentTarget:
-    macOS: "14.0"
+    # The oldest macOS a release is tried on. tools/trellis/Makefile and
+    # install.sh hold the same floor, and bin/package checks both products.
+    macOS: "15.0"
 
 targets:
   Trellis:

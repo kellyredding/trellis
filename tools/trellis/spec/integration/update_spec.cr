@@ -22,7 +22,7 @@ private PACKAGE = <<-SH
     shift
   done
   mkdir -p "$out"
-  echo archive > "$out/trellis-darwin-arm64.tar.gz"
+  echo archive > "$out/trellis-darwin.tar.gz"
 
   SH
 
@@ -82,7 +82,7 @@ describe "trellis update" do
       result.exit_code.should eq(0)
 
       out_dir = result.stdout[/^package --local --out (\S+)$/m, 1]
-      archive = "#{out_dir}/trellis-darwin-arm64.tar.gz"
+      archive = "#{out_dir}/trellis-darwin.tar.gz"
       result.stdout.should contain("install.sh --from #{archive} --preview\narchive present\n")
       Dir.exists?(out_dir).should be_false
     end
@@ -123,7 +123,7 @@ describe "trellis update" do
       root = SpecHelper.checkout(sandbox, package: "#!/bin/sh\nexit 0\n", install: INSTALL)
       result = SpecHelper.run(sandbox, ["update", "--local", root.to_s])
       result.exit_code.should eq(1)
-      result.stderr.should contain("bin/package wrote no trellis-darwin-arm64.tar.gz")
+      result.stderr.should contain("bin/package wrote no trellis-darwin.tar.gz")
       result.stdout.should_not contain("install.sh")
     end
   end
