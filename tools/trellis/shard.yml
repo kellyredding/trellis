@@ -1,5 +1,5 @@
 name: trellis
-version: 0.2.0
+version: 0.2.1
 description: |
   Command-line client for Trellis: lists and places windows through the
   Trellis app, and reads and writes the layout config.
